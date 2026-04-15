@@ -4,11 +4,12 @@ import {
   Search, Radar, Globe, Shield, Bug, Terminal, Network, Lock, FileSearch, Zap,
   Database, Code, Eye, Smartphone, Cloud, ArrowLeft, ExternalLink, BookOpen,
   Star, ChevronDown, ChevronRight, Layers, Fingerprint, Wifi, KeyRound, Binary,
-  Plus, Pencil, Trash2, X, Loader2, Save,
+  Plus, Pencil, Trash2, X, Loader2, Save, Play,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import ToolSandbox from "@/components/ToolSandbox";
 import { useToast } from "@/hooks/use-toast";
 
 interface Tool {
