@@ -1,15 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Send, Crosshair, User, Swords, Activity, ChevronDown } from "lucide-react";
-
-interface Message {
-  id: string;
-  sender: string;
-  role: "user" | "manager" | "lead" | "raider";
-  content: string;
-  timestamp: string;
-  leadName?: string;
-}
+import { Send, Crosshair, User, Swords, Activity, Loader2 } from "lucide-react";
+import { useMission, useMessages } from "@/hooks/useMission";
 
 const roleStyles = {
   user: { border: "border-foreground/20", badge: "bg-foreground/10 text-foreground", icon: User },
@@ -18,70 +10,9 @@ const roleStyles = {
   raider: { border: "border-border", badge: "bg-surface-3 text-muted-foreground", icon: Activity },
 };
 
-const sampleMessages: Message[] = [
-  {
-    id: "1",
-    sender: "You",
-    role: "user",
-    content: "Alright team, we have a new target. Let's start with recon on the scope provided. I want full subdomain enumeration, port scanning, and tech stack fingerprinting. Let's move.",
-    timestamp: "14:32",
-  },
-  {
-    id: "2",
-    sender: "COMMANDER",
-    role: "manager",
-    content: "Copy that. Initiating mission briefing. PHANTOM — you're on recon. Get subdomains, DNS records, and map the attack surface. VIPER — prep exploit modules for common web vulns once we have endpoints. SPECTER — stand by for payload generation once we identify injection points.",
-    timestamp: "14:32",
-  },
-  {
-    id: "3",
-    sender: "PHANTOM",
-    role: "lead",
-    leadName: "Recon Lead",
-    content: "Roger. Spinning up Raiders for subdomain enumeration and port scanning. R-001, initiate full TCP scan on primary target. R-002, run subfinder + amass for subdomain discovery. I'll correlate results once they report back.",
-    timestamp: "14:33",
-  },
-  {
-    id: "4",
-    sender: "R-001",
-    role: "raider",
-    content: "Port scan initiated on target range. Running SYN scan across top 10,000 ports. ETA: ~4 minutes. Will report open services with version detection.",
-    timestamp: "14:33",
-  },
-  {
-    id: "5",
-    sender: "R-002",
-    role: "raider",
-    content: "Subdomain enumeration started. Sources: subfinder, amass, crt.sh, SecurityTrails. Cross-referencing with DNS bruteforce. Found 47 subdomains so far, filtering wildcards...",
-    timestamp: "14:34",
-  },
-  {
-    id: "6",
-    sender: "VIPER",
-    role: "lead",
-    leadName: "Exploit Lead",
-    content: "Standing by. I've pre-loaded modules for SQLi, XSS, SSRF, and IDOR based on the target's tech stack hints from the scope doc. Once PHANTOM has endpoints, I'll deploy targeted Raiders.",
-    timestamp: "14:35",
-  },
-  {
-    id: "7",
-    sender: "R-001",
-    role: "raider",
-    content: "Scan complete. 23 open ports detected. Notable: 80/443 (nginx 1.21), 8080 (Apache Tomcat), 3000 (Node.js), 5432 (PostgreSQL — filtered). Sending full results to PHANTOM.",
-    timestamp: "14:38",
-  },
-  {
-    id: "8",
-    sender: "PHANTOM",
-    role: "lead",
-    leadName: "Recon Lead",
-    content: "Good work R-001. Correlating with R-002's subdomain results now. We have 3 interesting subdomains running different services: api.target.com (Node), admin.target.com (Tomcat), staging.target.com (nginx). Sharing attack surface map with VIPER and SPECTER.",
-    timestamp: "14:39",
-  },
-];
-
 export default function ConversationFeed() {
-  const [messages, setMessages] = useState<Message[]>(sampleMessages);
+  const { mission, conversation, loading: missionLoading } = useMission();
+  const { messages, loading: msgLoading, sendMessage } = useMessages(conversation?.id);
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -89,18 +20,20 @@ export default function ConversationFeed() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      sender: "You",
-      role: "user",
-      content: input,
-      timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }),
-    };
-    setMessages(prev => [...prev, newMsg]);
+    const text = input;
     setInput("");
+    await sendMessage(text);
   };
+
+  if (missionLoading || msgLoading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-background">
+        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -112,20 +45,25 @@ export default function ConversationFeed() {
             MISSION FEED
           </span>
           <span className="text-[10px] font-mono text-muted-foreground px-2 py-0.5 rounded bg-surface-2 border border-border">
-            ACTIVE — BUG BOUNTY #0042
+            {mission ? `ACTIVE — ${mission.name.toUpperCase()}` : "NO MISSION"}
           </span>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
-          <span>8 messages</span>
-          <span>•</span>
-          <span>4 agents active</span>
+          <span>{messages.length} messages</span>
         </div>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Crosshair className="w-8 h-8 text-muted-foreground mb-3" />
+            <p className="text-sm font-mono text-muted-foreground">No messages yet.</p>
+            <p className="text-xs font-mono text-muted-foreground mt-1">Command your agents to begin the mission.</p>
+          </div>
+        )}
         {messages.map((msg, i) => {
-          const style = roleStyles[msg.role];
+          const style = roleStyles[msg.role] || roleStyles.user;
           const Icon = style.icon;
           return (
             <motion.div
@@ -135,28 +73,17 @@ export default function ConversationFeed() {
               transition={{ delay: i * 0.02 }}
               className={`flex gap-3 ${msg.role === "raider" ? "ml-8" : ""}`}
             >
-              {/* Avatar */}
               <div className={`w-7 h-7 rounded-md shrink-0 flex items-center justify-center border ${style.border} bg-surface-2`}>
                 <Icon className={`w-3.5 h-3.5 ${msg.role === "manager" || msg.role === "lead" ? "text-primary" : "text-muted-foreground"}`} />
               </div>
-
-              {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`text-[11px] font-mono font-bold ${msg.role === "user" ? "text-foreground" : "text-primary"}`}>
-                    {msg.sender}
+                    {msg.sender_name}
                   </span>
-                  {msg.leadName && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                      {msg.leadName}
-                    </span>
-                  )}
-                  {msg.role === "raider" && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-3 text-muted-foreground">
-                      Raider
-                    </span>
-                  )}
-                  <span className="text-[9px] font-mono text-muted-foreground">{msg.timestamp}</span>
+                  <span className="text-[9px] font-mono text-muted-foreground">
+                    {new Date(msg.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                  </span>
                 </div>
                 <p className="text-[12px] leading-relaxed text-foreground/85">{msg.content}</p>
               </div>
@@ -185,7 +112,7 @@ export default function ConversationFeed() {
         </div>
         <div className="flex items-center gap-3 mt-2 px-1">
           <span className="text-[9px] font-mono text-muted-foreground">
-            Press Enter to send • Agents will respond automatically
+            Press Enter to send • Messages saved to database
           </span>
         </div>
       </div>
