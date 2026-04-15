@@ -1,20 +1,9 @@
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Radar,
-  Globe,
-  Shield,
-  Bug,
-  Terminal,
-  Network,
-  Crosshair,
-  FileSearch,
-  Settings,
-  Zap,
-  BookOpen,
+  ChevronLeft, ChevronRight, Radar, Globe, Shield, Bug, Terminal,
+  Network, Crosshair, FileSearch, Settings, Zap, BookOpen, LogOut,
 } from "lucide-react";
 
 const navItems = [
@@ -37,9 +26,9 @@ interface LeftSidebarProps {
 }
 
 export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
-  const [activeItem, setActiveItem] = useState("Recon");
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut } = useAuth();
 
   return (
     <motion.aside
@@ -53,11 +42,7 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
         onClick={onToggle}
         className="absolute top-3 right-0 translate-x-1/2 z-20 w-5 h-5 rounded-full bg-surface-2 border border-border flex items-center justify-center hover:border-primary transition-colors"
       >
-        {collapsed ? (
-          <ChevronRight className="w-3 h-3 text-primary" />
-        ) : (
-          <ChevronLeft className="w-3 h-3 text-primary" />
-        )}
+        {collapsed ? <ChevronRight className="w-3 h-3 text-primary" /> : <ChevronLeft className="w-3 h-3 text-primary" />}
       </button>
 
       {/* Logo */}
@@ -67,12 +52,8 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
         </div>
         <AnimatePresence>
           {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              className="font-mono font-bold text-primary text-sm tracking-wider neon-gold whitespace-nowrap"
-            >
+            <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
+              className="font-mono font-bold text-primary text-sm tracking-wider neon-gold whitespace-nowrap">
               XBOW
             </motion.span>
           )}
@@ -82,11 +63,12 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5">
         {navItems.map(({ icon: Icon, label, path }) => {
-          const isActive = activeItem === label;
+          const isActive = (label === "Recon" && location.pathname === "/") ||
+                           (label === "Second Brain" && location.pathname === "/second-brain");
           return (
             <button
               key={label}
-              onClick={() => { setActiveItem(label); navigate(path); }}
+              onClick={() => navigate(path)}
               className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-xs font-medium transition-all group ${
                 isActive
                   ? "bg-primary/10 text-primary neon-gold-border border border-primary/20"
@@ -96,12 +78,7 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
               <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`} />
               <AnimatePresence>
                 {!collapsed && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="whitespace-nowrap"
-                  >
+                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="whitespace-nowrap">
                     {label}
                   </motion.span>
                 )}
@@ -111,23 +88,32 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
         })}
       </nav>
 
-      {/* Status */}
-      <div className="p-3 border-t border-border">
+      {/* Footer */}
+      <div className="p-3 border-t border-border space-y-2">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse-gold" />
           <AnimatePresence>
             {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-[10px] font-mono text-muted-foreground"
-              >
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="text-[10px] font-mono text-muted-foreground">
                 SYSTEM ONLINE
               </motion.span>
             )}
           </AnimatePresence>
         </div>
+        <button
+          onClick={signOut}
+          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-surface-2 transition-all"
+        >
+          <LogOut className="w-3.5 h-3.5 shrink-0" />
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="whitespace-nowrap">
+                Sign Out
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
       </div>
     </motion.aside>
   );
