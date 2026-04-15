@@ -336,15 +336,28 @@ export default function SecondBrain() {
           onCancel={() => { setShowForm(false); setEditingTool(null); }}
         />
       )}
+
+      {/* Sandbox Modal */}
+      <AnimatePresence>
+        {sandboxTool && (
+          <ToolSandbox
+            toolName={sandboxTool.name}
+            toolDescription={sandboxTool.description || ""}
+            toolUseCase={sandboxTool.use_case || ""}
+            onClose={() => setSandboxTool(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function ToolCard({ tool, onTagClick, onEdit, onDelete }: {
+function ToolCard({ tool, onTagClick, onEdit, onDelete, onSandbox }: {
   tool: Tool;
   onTagClick: (tag: string) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onSandbox: () => void;
 }) {
   return (
     <div className="group rounded-lg border border-border bg-surface-1 hover:border-primary/20 hover:neon-gold-box transition-all p-3 space-y-2">
