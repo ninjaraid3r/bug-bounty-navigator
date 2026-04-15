@@ -14,7 +14,288 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agents: {
+        Row: {
+          codename: string
+          config: Json | null
+          created_at: string
+          id: string
+          name: string
+          parent_agent_id: string | null
+          role_description: string | null
+          status: Database["public"]["Enums"]["agent_status"]
+          system_prompt: string | null
+          type: Database["public"]["Enums"]["agent_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          codename: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          name: string
+          parent_agent_id?: string | null
+          role_description?: string | null
+          status?: Database["public"]["Enums"]["agent_status"]
+          system_prompt?: string | null
+          type: Database["public"]["Enums"]["agent_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          codename?: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          name?: string
+          parent_agent_id?: string | null
+          role_description?: string | null
+          status?: Database["public"]["Enums"]["agent_status"]
+          system_prompt?: string | null
+          type?: Database["public"]["Enums"]["agent_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_parent_agent_id_fkey"
+            columns: ["parent_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          mission_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mission_id: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mission_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      findings: {
+        Row: {
+          affected_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          mission_id: string
+          proof_of_concept: string | null
+          reward_amount: number | null
+          severity: Database["public"]["Enums"]["finding_severity"]
+          status: string
+          title: string
+          tools_used: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          affected_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          mission_id: string
+          proof_of_concept?: string | null
+          reward_amount?: number | null
+          severity?: Database["public"]["Enums"]["finding_severity"]
+          status?: string
+          title: string
+          tools_used?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          affected_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          mission_id?: string
+          proof_of_concept?: string | null
+          reward_amount?: number | null
+          severity?: Database["public"]["Enums"]["finding_severity"]
+          status?: string
+          title?: string
+          tools_used?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "findings_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          agent_id: string | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          role: Database["public"]["Enums"]["message_role"]
+          sender_name: string
+          user_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: Database["public"]["Enums"]["message_role"]
+          sender_name: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: Database["public"]["Enums"]["message_role"]
+          sender_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      missions: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          scope: string | null
+          status: Database["public"]["Enums"]["mission_status"]
+          target: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          scope?: string | null
+          status?: Database["public"]["Enums"]["mission_status"]
+          target: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          scope?: string | null
+          status?: Database["public"]["Enums"]["mission_status"]
+          target?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tools: {
+        Row: {
+          bookmarked: boolean
+          category: string
+          created_at: string
+          custom_notes: string | null
+          description: string | null
+          difficulty: string | null
+          id: string
+          is_default: boolean
+          name: string
+          tags: string[] | null
+          updated_at: string
+          use_case: string | null
+          user_id: string | null
+          website_url: string | null
+        }
+        Insert: {
+          bookmarked?: boolean
+          category: string
+          created_at?: string
+          custom_notes?: string | null
+          description?: string | null
+          difficulty?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          tags?: string[] | null
+          updated_at?: string
+          use_case?: string | null
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          bookmarked?: boolean
+          category?: string
+          created_at?: string
+          custom_notes?: string | null
+          description?: string | null
+          difficulty?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          tags?: string[] | null
+          updated_at?: string
+          use_case?: string | null
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +304,16 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      agent_status: "active" | "idle" | "working" | "offline"
+      agent_type: "manager" | "lead" | "raider"
+      finding_severity: "info" | "low" | "medium" | "high" | "critical"
+      message_role: "user" | "manager" | "lead" | "raider"
+      mission_status:
+        | "planning"
+        | "active"
+        | "paused"
+        | "completed"
+        | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +440,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      agent_status: ["active", "idle", "working", "offline"],
+      agent_type: ["manager", "lead", "raider"],
+      finding_severity: ["info", "low", "medium", "high", "critical"],
+      message_role: ["user", "manager", "lead", "raider"],
+      mission_status: ["planning", "active", "paused", "completed", "archived"],
+    },
   },
 } as const
