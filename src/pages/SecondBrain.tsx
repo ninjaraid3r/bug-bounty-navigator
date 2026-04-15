@@ -4,11 +4,12 @@ import {
   Search, Radar, Globe, Shield, Bug, Terminal, Network, Lock, FileSearch, Zap,
   Database, Code, Eye, Smartphone, Cloud, ArrowLeft, ExternalLink, BookOpen,
   Star, ChevronDown, ChevronRight, Layers, Fingerprint, Wifi, KeyRound, Binary,
-  Plus, Pencil, Trash2, X, Loader2, Save,
+  Plus, Pencil, Trash2, X, Loader2, Save, Play,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import ToolSandbox from "@/components/ToolSandbox";
 import { useToast } from "@/hooks/use-toast";
 
 interface Tool {
@@ -82,6 +83,7 @@ export default function SecondBrain() {
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [sandboxTool, setSandboxTool] = useState<Tool | null>(null);
 
   useEffect(() => {
     loadTools();
@@ -306,6 +308,7 @@ export default function SecondBrain() {
                           onTagClick={setSelectedTag}
                           onEdit={() => { setEditingTool(tool); setShowForm(true); }}
                           onDelete={() => tool.id && deleteTool(tool.id)}
+                          onSandbox={() => setSandboxTool(tool)}
                         />
                       ))}
                     </div>
@@ -333,15 +336,28 @@ export default function SecondBrain() {
           onCancel={() => { setShowForm(false); setEditingTool(null); }}
         />
       )}
+
+      {/* Sandbox Modal */}
+      <AnimatePresence>
+        {sandboxTool && (
+          <ToolSandbox
+            toolName={sandboxTool.name}
+            toolDescription={sandboxTool.description || ""}
+            toolUseCase={sandboxTool.use_case || ""}
+            onClose={() => setSandboxTool(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function ToolCard({ tool, onTagClick, onEdit, onDelete }: {
+function ToolCard({ tool, onTagClick, onEdit, onDelete, onSandbox }: {
   tool: Tool;
   onTagClick: (tag: string) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onSandbox: () => void;
 }) {
   return (
     <div className="group rounded-lg border border-border bg-surface-1 hover:border-primary/20 hover:neon-gold-box transition-all p-3 space-y-2">
@@ -355,7 +371,11 @@ function ToolCard({ tool, onTagClick, onEdit, onDelete }: {
           </div>
           <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{tool.description}</p>
         </div>
-        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button onClick={onSandbox} className="p-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="Run in Sandbox">
+            <Play className="w-3 h-3" />
+          </button>
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={onEdit} className="p-1 rounded hover:bg-surface-2 text-muted-foreground hover:text-primary transition-colors">
             <Pencil className="w-3 h-3" />
           </button>
@@ -367,6 +387,7 @@ function ToolCard({ tool, onTagClick, onEdit, onDelete }: {
               <ExternalLink className="w-3 h-3" />
             </a>
           )}
+          </div>
         </div>
       </div>
 
