@@ -371,7 +371,11 @@ function ToolCard({ tool, onTagClick, onEdit, onDelete, onSandbox }: {
           </div>
           <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{tool.description}</p>
         </div>
-        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button onClick={onSandbox} className="p-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="Run in Sandbox">
+            <Play className="w-3 h-3" />
+          </button>
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={onEdit} className="p-1 rounded hover:bg-surface-2 text-muted-foreground hover:text-primary transition-colors">
             <Pencil className="w-3 h-3" />
           </button>
