@@ -308,6 +308,7 @@ export default function SecondBrain() {
                           onTagClick={setSelectedTag}
                           onEdit={() => { setEditingTool(tool); setShowForm(true); }}
                           onDelete={() => tool.id && deleteTool(tool.id)}
+                          onSandbox={() => setSandboxTool(tool)}
                         />
                       ))}
                     </div>
