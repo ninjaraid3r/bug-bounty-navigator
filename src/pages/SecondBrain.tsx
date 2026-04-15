@@ -387,6 +387,7 @@ function ToolCard({ tool, onTagClick, onEdit, onDelete, onSandbox }: {
               <ExternalLink className="w-3 h-3" />
             </a>
           )}
+          </div>
         </div>
       </div>
 
