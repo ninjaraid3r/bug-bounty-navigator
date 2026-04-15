@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,19 +14,21 @@ import {
   FileSearch,
   Settings,
   Zap,
+  BookOpen,
 } from "lucide-react";
 
 const navItems = [
-  { icon: Radar, label: "Recon", active: true },
-  { icon: Globe, label: "Attack Surface" },
-  { icon: Shield, label: "Exploit Lab" },
-  { icon: Bug, label: "Vuln Scanner" },
-  { icon: Terminal, label: "Payload Forge" },
-  { icon: Network, label: "Network Map" },
-  { icon: Crosshair, label: "Targets" },
-  { icon: FileSearch, label: "Reports" },
-  { icon: Zap, label: "Automation" },
-  { icon: Settings, label: "Settings" },
+  { icon: Radar, label: "Recon", path: "/" },
+  { icon: BookOpen, label: "Second Brain", path: "/second-brain" },
+  { icon: Globe, label: "Attack Surface", path: "/" },
+  { icon: Shield, label: "Exploit Lab", path: "/" },
+  { icon: Bug, label: "Vuln Scanner", path: "/" },
+  { icon: Terminal, label: "Payload Forge", path: "/" },
+  { icon: Network, label: "Network Map", path: "/" },
+  { icon: Crosshair, label: "Targets", path: "/" },
+  { icon: FileSearch, label: "Reports", path: "/" },
+  { icon: Zap, label: "Automation", path: "/" },
+  { icon: Settings, label: "Settings", path: "/" },
 ];
 
 interface LeftSidebarProps {
@@ -35,6 +38,8 @@ interface LeftSidebarProps {
 
 export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
   const [activeItem, setActiveItem] = useState("Recon");
+  const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <motion.aside
@@ -76,12 +81,12 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5">
-        {navItems.map(({ icon: Icon, label, active }) => {
+        {navItems.map(({ icon: Icon, label, path }) => {
           const isActive = activeItem === label;
           return (
             <button
               key={label}
-              onClick={() => setActiveItem(label)}
+              onClick={() => { setActiveItem(label); navigate(path); }}
               className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-xs font-medium transition-all group ${
                 isActive
                   ? "bg-primary/10 text-primary neon-gold-border border border-primary/20"
