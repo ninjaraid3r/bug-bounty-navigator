@@ -83,6 +83,7 @@ export default function SecondBrain() {
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [sandboxTool, setSandboxTool] = useState<Tool | null>(null);
 
   useEffect(() => {
     loadTools();
