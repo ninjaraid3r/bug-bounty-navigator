@@ -81,12 +81,12 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5">
-        {navItems.map(({ icon: Icon, label, active }) => {
+        {navItems.map(({ icon: Icon, label, path }) => {
           const isActive = activeItem === label;
           return (
             <button
               key={label}
-              onClick={() => setActiveItem(label)}
+              onClick={() => { setActiveItem(label); navigate(path); }}
               className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-xs font-medium transition-all group ${
                 isActive
                   ? "bg-primary/10 text-primary neon-gold-border border border-primary/20"
