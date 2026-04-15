@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,19 +14,21 @@ import {
   FileSearch,
   Settings,
   Zap,
+  BookOpen,
 } from "lucide-react";
 
 const navItems = [
-  { icon: Radar, label: "Recon", active: true },
-  { icon: Globe, label: "Attack Surface" },
-  { icon: Shield, label: "Exploit Lab" },
-  { icon: Bug, label: "Vuln Scanner" },
-  { icon: Terminal, label: "Payload Forge" },
-  { icon: Network, label: "Network Map" },
-  { icon: Crosshair, label: "Targets" },
-  { icon: FileSearch, label: "Reports" },
-  { icon: Zap, label: "Automation" },
-  { icon: Settings, label: "Settings" },
+  { icon: Radar, label: "Recon", path: "/" },
+  { icon: BookOpen, label: "Second Brain", path: "/second-brain" },
+  { icon: Globe, label: "Attack Surface", path: "/" },
+  { icon: Shield, label: "Exploit Lab", path: "/" },
+  { icon: Bug, label: "Vuln Scanner", path: "/" },
+  { icon: Terminal, label: "Payload Forge", path: "/" },
+  { icon: Network, label: "Network Map", path: "/" },
+  { icon: Crosshair, label: "Targets", path: "/" },
+  { icon: FileSearch, label: "Reports", path: "/" },
+  { icon: Zap, label: "Automation", path: "/" },
+  { icon: Settings, label: "Settings", path: "/" },
 ];
 
 interface LeftSidebarProps {
