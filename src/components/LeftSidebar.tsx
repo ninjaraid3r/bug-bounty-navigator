@@ -38,6 +38,8 @@ interface LeftSidebarProps {
 
 export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
   const [activeItem, setActiveItem] = useState("Recon");
+  const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <motion.aside
