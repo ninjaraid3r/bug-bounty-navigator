@@ -1,0 +1,13 @@
+---
+name: Color tokens
+description: Dark grey background with dark velvet surfaces and golden-yellow neon accents
+type: design
+---
+Background: 0 0% 7% (near-black grey)
+Surfaces: 340 20% 10-17% (dark velvet/wine tones)
+Primary/Accent: 45 100% 50% (golden-yellow neon)
+Foreground: 30 10% 85%
+Muted: 340 10% 45%
+Border: 340 18% 16%
+Sidebar bg: 340 22% 8%
+Gold glow utilities: neon-gold, neon-gold-box, neon-gold-border
