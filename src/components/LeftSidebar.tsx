@@ -54,7 +54,7 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
           {!collapsed && (
             <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
               className="font-mono font-bold text-primary text-sm tracking-wider neon-gold whitespace-nowrap">
-              XBOW
+              LiQ.Raid3r
             </motion.span>
           )}
         </AnimatePresence>
