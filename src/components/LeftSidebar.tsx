@@ -1,9 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
 import {
   ChevronLeft, ChevronRight, Radar, Globe, Shield, Bug, Terminal,
-  Network, Crosshair, FileSearch, Settings, Zap, BookOpen, LogOut,
+  Network, Crosshair, FileSearch, Settings, Zap, BookOpen,
 } from "lucide-react";
 
 const navItems = [
@@ -28,7 +27,7 @@ interface LeftSidebarProps {
 export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  
 
   return (
     <motion.aside
@@ -101,19 +100,6 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
             )}
           </AnimatePresence>
         </div>
-        <button
-          onClick={signOut}
-          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-surface-2 transition-all"
-        >
-          <LogOut className="w-3.5 h-3.5 shrink-0" />
-          <AnimatePresence>
-            {!collapsed && (
-              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="whitespace-nowrap">
-                Sign Out
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </button>
       </div>
     </motion.aside>
   );
