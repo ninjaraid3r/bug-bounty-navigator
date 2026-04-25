@@ -6,6 +6,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import SecondBrain from "./pages/SecondBrain";
+import AttackSurface from "./pages/AttackSurface";
+import ExploitLab from "./pages/ExploitLab";
+import VulnScanner from "./pages/VulnScanner";
+import PayloadForge from "./pages/PayloadForge";
+import NetworkMap from "./pages/NetworkMap";
+import Targets from "./pages/Targets";
+import Reports from "./pages/Reports";
+import Automation from "./pages/Automation";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +36,15 @@ const AppRoutes = () => (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/second-brain" element={<SecondBrain />} />
+      <Route path="/attack-surface" element={<AttackSurface />} />
+      <Route path="/exploit-lab" element={<ExploitLab />} />
+      <Route path="/vuln-scanner" element={<VulnScanner />} />
+      <Route path="/payload-forge" element={<PayloadForge />} />
+      <Route path="/network-map" element={<NetworkMap />} />
+      <Route path="/targets" element={<Targets />} />
+      <Route path="/reports" element={<Reports />} />
+      <Route path="/automation" element={<Automation />} />
+      <Route path="/settings" element={<Settings />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </AuthGate>

@@ -8,15 +8,15 @@ import {
 const navItems = [
   { icon: Radar, label: "Recon", path: "/" },
   { icon: BookOpen, label: "Second Brain", path: "/second-brain" },
-  { icon: Globe, label: "Attack Surface", path: "/" },
-  { icon: Shield, label: "Exploit Lab", path: "/" },
-  { icon: Bug, label: "Vuln Scanner", path: "/" },
-  { icon: Terminal, label: "Payload Forge", path: "/" },
-  { icon: Network, label: "Network Map", path: "/" },
-  { icon: Crosshair, label: "Targets", path: "/" },
-  { icon: FileSearch, label: "Reports", path: "/" },
-  { icon: Zap, label: "Automation", path: "/" },
-  { icon: Settings, label: "Settings", path: "/" },
+  { icon: Globe, label: "Attack Surface", path: "/attack-surface" },
+  { icon: Shield, label: "Exploit Lab", path: "/exploit-lab" },
+  { icon: Bug, label: "Vuln Scanner", path: "/vuln-scanner" },
+  { icon: Terminal, label: "Payload Forge", path: "/payload-forge" },
+  { icon: Network, label: "Network Map", path: "/network-map" },
+  { icon: Crosshair, label: "Targets", path: "/targets" },
+  { icon: FileSearch, label: "Reports", path: "/reports" },
+  { icon: Zap, label: "Automation", path: "/automation" },
+  { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
 interface LeftSidebarProps {
@@ -62,8 +62,7 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5">
         {navItems.map(({ icon: Icon, label, path }) => {
-          const isActive = (label === "Recon" && location.pathname === "/") ||
-                           (label === "Second Brain" && location.pathname === "/second-brain");
+          const isActive = location.pathname === path;
           return (
             <button
               key={label}
