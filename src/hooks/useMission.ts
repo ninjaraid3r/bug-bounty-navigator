@@ -97,6 +97,21 @@ export function useMessages(conversationId: string | undefined) {
   useEffect(() => {
     if (!conversationId || !user) return;
     loadMessages();
+
+    // Realtime subscription so agent replies stream in instantly
+    const channel = supabase
+      .channel(`messages:${conversationId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+        (payload) => {
+          const msg = payload.new as DBMessage;
+          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [conversationId, user]);
 
   async function loadMessages() {

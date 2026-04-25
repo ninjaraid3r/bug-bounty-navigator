@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import SecondBrain from "./pages/SecondBrain";
 import AttackSurface from "./pages/AttackSurface";
+import Bounty from "./pages/Bounty";
 import ExploitLab from "./pages/ExploitLab";
 import VulnScanner from "./pages/VulnScanner";
 import PayloadForge from "./pages/PayloadForge";
@@ -36,6 +37,7 @@ const AppRoutes = () => (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/second-brain" element={<SecondBrain />} />
+      <Route path="/bounty" element={<Bounty />} />
       <Route path="/attack-surface" element={<AttackSurface />} />
       <Route path="/exploit-lab" element={<ExploitLab />} />
       <Route path="/vuln-scanner" element={<VulnScanner />} />

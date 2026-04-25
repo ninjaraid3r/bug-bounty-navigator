@@ -2,12 +2,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft, ChevronRight, Radar, Globe, Shield, Bug, Terminal,
-  Network, Crosshair, FileSearch, Settings, Zap, BookOpen,
+  Network, Crosshair, FileSearch, Settings, Zap, BookOpen, DollarSign,
 } from "lucide-react";
 
 const navItems = [
   { icon: Radar, label: "Recon", path: "/" },
   { icon: BookOpen, label: "Second Brain", path: "/second-brain" },
+  { icon: DollarSign, label: "Bounty", path: "/bounty" },
   { icon: Globe, label: "Attack Surface", path: "/attack-surface" },
   { icon: Shield, label: "Exploit Lab", path: "/exploit-lab" },
   { icon: Bug, label: "Vuln Scanner", path: "/vuln-scanner" },
