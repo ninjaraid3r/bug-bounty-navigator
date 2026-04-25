@@ -37,6 +37,7 @@ const AppRoutes = () => (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/second-brain" element={<SecondBrain />} />
+      <Route path="/bounty" element={<Bounty />} />
       <Route path="/attack-surface" element={<AttackSurface />} />
       <Route path="/exploit-lab" element={<ExploitLab />} />
       <Route path="/vuln-scanner" element={<VulnScanner />} />
