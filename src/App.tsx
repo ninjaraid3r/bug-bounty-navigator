@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import SecondBrain from "./pages/SecondBrain";
 import AttackSurface from "./pages/AttackSurface";
+import Bounty from "./pages/Bounty";
 import ExploitLab from "./pages/ExploitLab";
 import VulnScanner from "./pages/VulnScanner";
 import PayloadForge from "./pages/PayloadForge";
