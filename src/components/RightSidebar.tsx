@@ -42,6 +42,7 @@ interface RightSidebarProps {
 }
 
 export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps) {
+  const navigate = useNavigate();
   return (
     <motion.aside
       initial={false}
