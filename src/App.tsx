@@ -17,6 +17,9 @@ import Reports from "./pages/Reports";
 import Automation from "./pages/Automation";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import AgentProfile from "./pages/AgentProfile";
+import CommanderSessions from "./pages/CommanderSessions";
+import SessionDetail from "./pages/SessionDetail";
 
 const queryClient = new QueryClient();
 
