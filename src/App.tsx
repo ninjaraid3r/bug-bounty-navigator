@@ -50,6 +50,9 @@ const AppRoutes = () => (
       <Route path="/reports" element={<Reports />} />
       <Route path="/automation" element={<Automation />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/agents/:codename" element={<AgentProfile />} />
+      <Route path="/commander/sessions" element={<CommanderSessions />} />
+      <Route path="/commander/sessions/:id" element={<SessionDetail />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </AuthGate>
