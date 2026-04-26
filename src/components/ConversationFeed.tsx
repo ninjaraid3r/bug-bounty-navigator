@@ -193,6 +193,33 @@ export default function ConversationFeed() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Quick Recon Actions */}
+      <div className="px-3 pt-2 pb-1 border-t border-border bg-surface-1">
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="text-[9px] font-mono font-bold text-primary tracking-wider">QUICK RECON</span>
+          <span className="text-[9px] font-mono text-muted-foreground truncate">
+            → {target}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {quickActions.map((a) => {
+            const Icon = a.icon;
+            return (
+              <button
+                key={a.label}
+                onClick={() => runPrompt(a.prompt)}
+                disabled={agentsThinking}
+                title={a.prompt}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-2 hover:bg-primary/15 border border-border hover:border-primary/40 text-[10px] font-mono text-foreground/80 hover:text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Icon className="w-3 h-3" />
+                {a.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Input */}
       <div className="p-3 border-t border-border bg-surface-1">
         <div className="flex items-center gap-2 bg-surface-2 rounded-lg border border-border focus-within:border-primary/30 focus-within:neon-gold-box transition-all">
