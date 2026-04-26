@@ -202,6 +202,14 @@ serve(async (req) => {
     return new Response(JSON.stringify({ responses: agentResponses, sessionId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  } catch (e) {
+    console.error("mission-chat error:", e);
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    const status = msg.includes("Rate limit") ? 429 : msg.includes("Credits") ? 402 : 500;
+    return new Response(JSON.stringify({ error: msg }), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
 
