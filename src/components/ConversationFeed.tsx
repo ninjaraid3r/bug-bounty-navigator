@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Send, Crosshair, User, Swords, Activity, Loader2, Bot } from "lucide-react";
+import { Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search, ShieldAlert, Mail } from "lucide-react";
 import { useMission, useMessages } from "@/hooks/useMission";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -24,16 +24,11 @@ export default function ConversationFeed() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, agentsThinking]);
 
-  const handleSend = async () => {
-    if (!input.trim() || agentsThinking) return;
-    const text = input;
-    setInput("");
-
-    // Save user message
+  const runPrompt = async (text: string) => {
+    if (!text.trim() || agentsThinking) return;
     const userMsg = await sendMessage(text);
     if (!userMsg) return;
 
-    // Call AI gateway
     setAgentsThinking(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -59,7 +54,6 @@ export default function ConversationFeed() {
         throw new Error(err.error || `Error ${resp.status}`);
       }
 
-      // Refresh messages from DB to get agent responses
       await refresh();
     } catch (e: any) {
       console.error("Agent error:", e);
@@ -72,6 +66,47 @@ export default function ConversationFeed() {
       setAgentsThinking(false);
     }
   };
+
+  const handleSend = async () => {
+    if (!input.trim() || agentsThinking) return;
+    const text = input;
+    setInput("");
+    await runPrompt(text);
+  };
+
+  const target = mission?.target || "target.com";
+  const quickActions = [
+    {
+      label: "DNS Recon",
+      icon: Globe,
+      prompt: `Phantom: Run full DNS reconnaissance on ${target}. Enumerate A/AAAA/MX/NS/TXT/CNAME records, check for zone transfer (AXFR), identify DNS providers, and surface any subdomain hints from records. Provide exact dig/dnsx commands and parse expected output.`,
+    },
+    {
+      label: "Subdomain Enum",
+      icon: Search,
+      prompt: `Phantom: Perform passive + active subdomain enumeration on ${target} using subfinder, amass, assetfinder, and crt.sh. Deduplicate, resolve live hosts with httpx, and report wildcard handling. Output the exact commands and a sample pipeline.`,
+    },
+    {
+      label: "Port Scan",
+      icon: Network,
+      prompt: `Phantom: Run a tiered port scan on ${target}. Start with masscan top-1000, then nmap -sV -sC -p- on responsive hosts. Identify exposed services, banners, and unusual ports. Provide commands, expected runtime, and triage notes.`,
+    },
+    {
+      label: "Tech Fingerprint",
+      icon: Fingerprint,
+      prompt: `Phantom: Fingerprint the tech stack of ${target} using whatweb, wappalyzer, httpx -tech-detect, and nuclei -t technologies/. Identify CMS, frameworks, CDN/WAF, JS libs, server headers, and likely versions. List CVE-relevant versions for Viper to follow up on.`,
+    },
+    {
+      label: "WAF/CDN Detect",
+      icon: ShieldAlert,
+      prompt: `Specter: Detect WAF/CDN protecting ${target} using wafw00f, nmap http-waf-detect, and header analysis. Identify provider (Cloudflare/Akamai/AWS/etc.), origin-IP leak vectors (DNS history, SSL cert SANs, subdomain misconfig), and bypass approaches.`,
+    },
+    {
+      label: "Email/OSINT",
+      icon: Mail,
+      prompt: `Phantom: Gather OSINT on ${target} — harvest emails (theHarvester, hunter.io patterns), check breach exposure (HIBP), enumerate employees on LinkedIn, find leaked creds on GitHub/pastebin, and surface SPF/DMARC/DKIM posture for phishing assessment.`,
+    },
+  ];
 
   if (missionLoading || msgLoading) {
     return (
@@ -156,6 +191,33 @@ export default function ConversationFeed() {
           </motion.div>
         )}
         <div ref={bottomRef} />
+      </div>
+
+      {/* Quick Recon Actions */}
+      <div className="px-3 pt-2 pb-1 border-t border-border bg-surface-1">
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="text-[9px] font-mono font-bold text-primary tracking-wider">QUICK RECON</span>
+          <span className="text-[9px] font-mono text-muted-foreground truncate">
+            → {target}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {quickActions.map((a) => {
+            const Icon = a.icon;
+            return (
+              <button
+                key={a.label}
+                onClick={() => runPrompt(a.prompt)}
+                disabled={agentsThinking}
+                title={a.prompt}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-2 hover:bg-primary/15 border border-border hover:border-primary/40 text-[10px] font-mono text-foreground/80 hover:text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Icon className="w-3 h-3" />
+                {a.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Input */}
