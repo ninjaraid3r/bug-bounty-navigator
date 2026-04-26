@@ -61,12 +61,42 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, userMessage, history } = await req.json();
+    const { conversationId, userMessage, history, missionId } = await req.json();
     if (!conversationId || !userMessage) {
       return new Response(JSON.stringify({ error: "Missing conversationId or userMessage" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Resolve mission
+    let resolvedMissionId = missionId as string | undefined;
+    if (!resolvedMissionId) {
+      const { data: convo } = await supabase
+        .from("conversations").select("mission_id").eq("id", conversationId).single();
+      resolvedMissionId = convo?.mission_id;
+    }
+
+    // Get-or-create active session (rolls a new one if last activity > 2h ago)
+    let sessionId: string | null = null;
+    if (resolvedMissionId) {
+      const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await supabase
+        .from("sessions").select("*")
+        .eq("user_id", user.id).eq("mission_id", resolvedMissionId)
+        .eq("status", "active").gte("started_at", cutoff)
+        .order("started_at", { ascending: false }).limit(1).maybeSingle();
+      if (existing) {
+        sessionId = existing.id;
+      } else {
+        const { data: created } = await supabase.from("sessions").insert({
+          user_id: user.id, mission_id: resolvedMissionId,
+          conversation_id: conversationId,
+          title: `Session ${new Date().toLocaleString()}`,
+          status: "active",
+        }).select().single();
+        sessionId = created?.id ?? null;
+      }
     }
 
     // Build conversation context from history
