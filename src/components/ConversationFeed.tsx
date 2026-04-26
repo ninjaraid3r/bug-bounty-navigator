@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search, ShieldAlert, Mail } from "lucide-react";
+import { Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search, ShieldAlert, Mail, Target, Check, X, Pencil } from "lucide-react";
 import { useMission, useMessages } from "@/hooks/useMission";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -12,11 +12,24 @@ const roleStyles = {
   raider: { border: "border-border", badge: "bg-surface-3 text-muted-foreground", icon: Activity },
 };
 
+// Validate domain / IPv4 / IPv6 / CIDR
+const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
+const IPV4_RE = /^(25[0-5]|2[0-4]\d|[01]?\d?\d)(\.(25[0-5]|2[0-4]\d|[01]?\d?\d)){3}(\/([0-9]|[12]\d|3[0-2]))?$/;
+const IPV6_RE = /^([0-9a-f]{1,4}:){2,7}[0-9a-f]{1,4}(\/\d{1,3})?$/i;
+const isValidScope = (s: string) => {
+  const v = s.trim().toLowerCase();
+  if (!v || v === "target.com") return false;
+  return DOMAIN_RE.test(v) || IPV4_RE.test(v) || IPV6_RE.test(v);
+};
+
 export default function ConversationFeed() {
-  const { mission, conversation, loading: missionLoading } = useMission();
+  const { mission, conversation, loading: missionLoading, updateTarget } = useMission();
   const { messages, loading: msgLoading, sendMessage, refresh } = useMessages(conversation?.id);
   const [input, setInput] = useState("");
   const [agentsThinking, setAgentsThinking] = useState(false);
+  const [editingScope, setEditingScope] = useState(false);
+  const [scopeDraft, setScopeDraft] = useState("");
+  const [savingScope, setSavingScope] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
