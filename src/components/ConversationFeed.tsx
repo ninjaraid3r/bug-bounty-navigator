@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Send, Crosshair, User, Swords, Activity, Loader2, Bot } from "lucide-react";
+import { Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search, ShieldAlert, Mail } from "lucide-react";
 import { useMission, useMessages } from "@/hooks/useMission";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
