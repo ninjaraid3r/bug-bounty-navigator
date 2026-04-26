@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_tasks: {
+        Row: {
+          agent_codename: string
+          agent_type: string
+          conversation_id: string | null
+          created_at: string
+          duration_ms: number | null
+          findings_count: number
+          grade: string | null
+          grade_reason: string | null
+          grade_score: number | null
+          id: string
+          manual_grade_override: boolean
+          message_id: string | null
+          metadata: Json | null
+          mission_id: string | null
+          prompt: string | null
+          result: string | null
+          session_id: string | null
+          task_type: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_codename: string
+          agent_type: string
+          conversation_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          findings_count?: number
+          grade?: string | null
+          grade_reason?: string | null
+          grade_score?: number | null
+          id?: string
+          manual_grade_override?: boolean
+          message_id?: string | null
+          metadata?: Json | null
+          mission_id?: string | null
+          prompt?: string | null
+          result?: string | null
+          session_id?: string | null
+          task_type?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_codename?: string
+          agent_type?: string
+          conversation_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          findings_count?: number
+          grade?: string | null
+          grade_reason?: string | null
+          grade_score?: number | null
+          id?: string
+          manual_grade_override?: boolean
+          message_id?: string | null
+          metadata?: Json | null
+          mission_id?: string | null
+          prompt?: string | null
+          result?: string | null
+          session_id?: string | null
+          task_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agents: {
         Row: {
           codename: string
@@ -66,6 +138,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      automations: {
+        Row: {
+          agent_codename: string
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          last_used_at: string | null
+          metadata: Json | null
+          name: string
+          prompt_template: string
+          source: string
+          status: string
+          updated_at: string
+          use_count: number
+          user_id: string
+        }
+        Insert: {
+          agent_codename: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_used_at?: string | null
+          metadata?: Json | null
+          name: string
+          prompt_template: string
+          source?: string
+          status?: string
+          updated_at?: string
+          use_count?: number
+          user_id: string
+        }
+        Update: {
+          agent_codename?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_used_at?: string | null
+          metadata?: Json | null
+          name?: string
+          prompt_template?: string
+          source?: string
+          status?: string
+          updated_at?: string
+          use_count?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       conversations: {
         Row: {
@@ -240,6 +363,75 @@ export type Database = {
           scope?: string | null
           status?: Database["public"]["Enums"]["mission_status"]
           target?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          automations_suggested: Json | null
+          conversation_id: string | null
+          created_at: string
+          ended_at: string | null
+          findings_count: number
+          grade: string | null
+          grade_notes: string | null
+          grade_score: number | null
+          id: string
+          lessons_learned: string | null
+          manual_grade_override: boolean
+          mission_id: string
+          next_missions: Json | null
+          started_at: string
+          status: string
+          summary: string | null
+          tasks_count: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          automations_suggested?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          findings_count?: number
+          grade?: string | null
+          grade_notes?: string | null
+          grade_score?: number | null
+          id?: string
+          lessons_learned?: string | null
+          manual_grade_override?: boolean
+          mission_id: string
+          next_missions?: Json | null
+          started_at?: string
+          status?: string
+          summary?: string | null
+          tasks_count?: number
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          automations_suggested?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          findings_count?: number
+          grade?: string | null
+          grade_notes?: string | null
+          grade_score?: number | null
+          id?: string
+          lessons_learned?: string | null
+          manual_grade_override?: boolean
+          mission_id?: string
+          next_missions?: Json | null
+          started_at?: string
+          status?: string
+          summary?: string | null
+          tasks_count?: number
+          title?: string
           updated_at?: string
           user_id?: string
         }
