@@ -86,7 +86,19 @@ export function useMission() {
     setLoading(false);
   }
 
-  return { mission, conversation, loading };
+  async function updateTarget(target: string) {
+    if (!mission) return;
+    const { data, error } = await supabase
+      .from("missions")
+      .update({ target })
+      .eq("id", mission.id)
+      .select()
+      .single();
+    if (data && !error) setMission(data);
+    return data;
+  }
+
+  return { mission, conversation, loading, updateTarget };
 }
 
 export function useMessages(conversationId: string | undefined) {

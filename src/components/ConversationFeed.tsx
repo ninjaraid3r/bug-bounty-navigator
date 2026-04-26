@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search, ShieldAlert, Mail } from "lucide-react";
+import { Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search, ShieldAlert, Mail, Target, Check, X, Pencil } from "lucide-react";
 import { useMission, useMessages } from "@/hooks/useMission";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -12,11 +12,24 @@ const roleStyles = {
   raider: { border: "border-border", badge: "bg-surface-3 text-muted-foreground", icon: Activity },
 };
 
+// Validate domain / IPv4 / IPv6 / CIDR
+const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
+const IPV4_RE = /^(25[0-5]|2[0-4]\d|[01]?\d?\d)(\.(25[0-5]|2[0-4]\d|[01]?\d?\d)){3}(\/([0-9]|[12]\d|3[0-2]))?$/;
+const IPV6_RE = /^([0-9a-f]{1,4}:){2,7}[0-9a-f]{1,4}(\/\d{1,3})?$/i;
+const isValidScope = (s: string) => {
+  const v = s.trim().toLowerCase();
+  if (!v || v === "target.com") return false;
+  return DOMAIN_RE.test(v) || IPV4_RE.test(v) || IPV6_RE.test(v);
+};
+
 export default function ConversationFeed() {
-  const { mission, conversation, loading: missionLoading } = useMission();
+  const { mission, conversation, loading: missionLoading, updateTarget } = useMission();
   const { messages, loading: msgLoading, sendMessage, refresh } = useMessages(conversation?.id);
   const [input, setInput] = useState("");
   const [agentsThinking, setAgentsThinking] = useState(false);
+  const [editingScope, setEditingScope] = useState(false);
+  const [scopeDraft, setScopeDraft] = useState("");
+  const [savingScope, setSavingScope] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -194,23 +207,86 @@ export default function ConversationFeed() {
       </div>
 
       {/* Quick Recon Actions */}
-      <div className="px-3 pt-2 pb-1 border-t border-border bg-surface-1">
-        <div className="flex items-center gap-2 mb-1.5">
+      <div className="px-3 pt-2 pb-2 border-t border-border bg-surface-1">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           <span className="text-[9px] font-mono font-bold text-primary tracking-wider">QUICK RECON</span>
-          <span className="text-[9px] font-mono text-muted-foreground truncate">
-            → {target}
-          </span>
+          <span className="text-[9px] font-mono text-muted-foreground">SCOPE:</span>
+          {editingScope ? (
+            <div className="flex items-center gap-1">
+              <input
+                autoFocus
+                value={scopeDraft}
+                onChange={(e) => setScopeDraft(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter") {
+                    if (!isValidScope(scopeDraft)) {
+                      toast({ title: "Invalid scope", description: "Enter a valid domain, IP, or CIDR.", variant: "destructive" });
+                      return;
+                    }
+                    setSavingScope(true);
+                    await updateTarget(scopeDraft.trim().toLowerCase());
+                    setSavingScope(false);
+                    setEditingScope(false);
+                  } else if (e.key === "Escape") {
+                    setEditingScope(false);
+                  }
+                }}
+                placeholder="example.com or 10.0.0.0/24"
+                className={`bg-surface-2 border rounded px-2 py-0.5 text-[10px] font-mono w-56 focus:outline-none ${
+                  scopeDraft && !isValidScope(scopeDraft) ? "border-destructive text-destructive" : "border-primary/40 text-foreground"
+                }`}
+              />
+              <button
+                onClick={async () => {
+                  if (!isValidScope(scopeDraft)) {
+                    toast({ title: "Invalid scope", description: "Enter a valid domain, IP, or CIDR.", variant: "destructive" });
+                    return;
+                  }
+                  setSavingScope(true);
+                  await updateTarget(scopeDraft.trim().toLowerCase());
+                  setSavingScope(false);
+                  setEditingScope(false);
+                }}
+                disabled={savingScope || !isValidScope(scopeDraft)}
+                className="p-0.5 rounded text-primary hover:bg-primary/15 disabled:opacity-30"
+              >
+                {savingScope ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              </button>
+              <button onClick={() => setEditingScope(false)} className="p-0.5 rounded text-muted-foreground hover:bg-surface-2">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setScopeDraft(mission?.target && mission.target !== "target.com" ? mission.target : ""); setEditingScope(true); }}
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-mono transition-all ${
+                isValidScope(target)
+                  ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+                  : "border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/15"
+              }`}
+            >
+              <Target className="w-3 h-3" />
+              {isValidScope(target) ? target : "NO SCOPE SET"}
+              <Pencil className="w-2.5 h-2.5 opacity-60" />
+            </button>
+          )}
         </div>
+        {!isValidScope(target) && !editingScope && (
+          <p className="text-[9px] font-mono text-destructive/80 mb-1.5">
+            Set a valid target (domain, IP, or CIDR) to enable quick actions.
+          </p>
+        )}
         <div className="flex flex-wrap gap-1.5">
           {quickActions.map((a) => {
             const Icon = a.icon;
+            const disabled = agentsThinking || !isValidScope(target);
             return (
               <button
                 key={a.label}
                 onClick={() => runPrompt(a.prompt)}
-                disabled={agentsThinking}
-                title={a.prompt}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-2 hover:bg-primary/15 border border-border hover:border-primary/40 text-[10px] font-mono text-foreground/80 hover:text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={disabled}
+                title={!isValidScope(target) ? "Set a valid scope first" : a.prompt}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-2 hover:bg-primary/15 border border-border hover:border-primary/40 text-[10px] font-mono text-foreground/80 hover:text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface-2 disabled:hover:border-border disabled:hover:text-foreground/80"
               >
                 <Icon className="w-3 h-3" />
                 {a.label}
