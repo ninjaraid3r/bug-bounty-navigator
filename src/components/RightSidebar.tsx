@@ -160,19 +160,22 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
   );
 }
 
-function AgentCard({ agent }: { agent: Agent }) {
+function AgentCard({ agent, onClick }: { agent: Agent; onClick?: () => void }) {
   return (
-    <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-2/50 border border-border hover:border-primary/20 transition-colors group">
+    <button
+      onClick={onClick}
+      className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-2/50 border border-border hover:border-primary/40 hover:bg-surface-2 transition-colors group cursor-pointer"
+    >
       <div className={`w-1.5 h-1.5 rounded-full ${statusColor[agent.status]}`} />
       <div className="flex-1 min-w-0">
-        <div className="text-[11px] font-mono font-semibold text-foreground truncate">
+        <div className="text-[11px] font-mono font-semibold text-foreground truncate group-hover:text-primary">
           {agent.name}
         </div>
         <div className="text-[9px] font-mono text-muted-foreground truncate">
           {agent.role}
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
