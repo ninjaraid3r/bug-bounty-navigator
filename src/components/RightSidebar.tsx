@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,7 +7,7 @@ import {
   Users,
   Swords,
   Activity,
-  Circle,
+  FileText,
 } from "lucide-react";
 
 interface Agent {
@@ -41,6 +42,7 @@ interface RightSidebarProps {
 }
 
 export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps) {
+  const navigate = useNavigate();
   return (
     <motion.aside
       initial={false}
@@ -96,9 +98,16 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
                 </div>
                 <div className="space-y-1">
                   {agents.filter(a => a.type === "manager").map(agent => (
-                    <AgentCard key={agent.name} agent={agent} />
+                    <AgentCard key={agent.name} agent={agent} onClick={() => navigate(`/agents/${agent.name.toLowerCase()}`)} />
                   ))}
                 </div>
+                <button
+                  onClick={() => navigate("/commander/sessions")}
+                  className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md bg-primary/10 border border-primary/30 hover:border-primary text-primary text-[10px] font-mono uppercase tracking-widest transition-colors"
+                >
+                  <FileText className="w-3 h-3" />
+                  Session Reports
+                </button>
               </div>
 
               {/* Leads */}
@@ -111,7 +120,7 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
                 </div>
                 <div className="space-y-1">
                   {agents.filter(a => a.type === "lead").map(agent => (
-                    <AgentCard key={agent.name} agent={agent} />
+                    <AgentCard key={agent.name} agent={agent} onClick={() => navigate(`/agents/${agent.name.toLowerCase()}`)} />
                   ))}
                 </div>
               </div>
@@ -126,7 +135,7 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
                 </div>
                 <div className="space-y-1">
                   {raiders.map(agent => (
-                    <AgentCard key={agent.name} agent={agent} />
+                    <AgentCard key={agent.name} agent={agent} onClick={() => navigate(`/agents/${agent.name.toLowerCase()}`)} />
                   ))}
                 </div>
               </div>
@@ -151,19 +160,22 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
   );
 }
 
-function AgentCard({ agent }: { agent: Agent }) {
+function AgentCard({ agent, onClick }: { agent: Agent; onClick?: () => void }) {
   return (
-    <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-2/50 border border-border hover:border-primary/20 transition-colors group">
+    <button
+      onClick={onClick}
+      className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-2/50 border border-border hover:border-primary/40 hover:bg-surface-2 transition-colors group cursor-pointer"
+    >
       <div className={`w-1.5 h-1.5 rounded-full ${statusColor[agent.status]}`} />
       <div className="flex-1 min-w-0">
-        <div className="text-[11px] font-mono font-semibold text-foreground truncate">
+        <div className="text-[11px] font-mono font-semibold text-foreground truncate group-hover:text-primary">
           {agent.name}
         </div>
         <div className="text-[9px] font-mono text-muted-foreground truncate">
           {agent.role}
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 

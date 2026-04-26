@@ -17,6 +17,9 @@ import Reports from "./pages/Reports";
 import Automation from "./pages/Automation";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import AgentProfile from "./pages/AgentProfile";
+import CommanderSessions from "./pages/CommanderSessions";
+import SessionDetail from "./pages/SessionDetail";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +50,9 @@ const AppRoutes = () => (
       <Route path="/reports" element={<Reports />} />
       <Route path="/automation" element={<Automation />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/agents/:codename" element={<AgentProfile />} />
+      <Route path="/commander/sessions" element={<CommanderSessions />} />
+      <Route path="/commander/sessions/:id" element={<SessionDetail />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </AuthGate>

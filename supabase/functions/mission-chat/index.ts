@@ -61,12 +61,42 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, userMessage, history } = await req.json();
+    const { conversationId, userMessage, history, missionId } = await req.json();
     if (!conversationId || !userMessage) {
       return new Response(JSON.stringify({ error: "Missing conversationId or userMessage" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Resolve mission
+    let resolvedMissionId = missionId as string | undefined;
+    if (!resolvedMissionId) {
+      const { data: convo } = await supabase
+        .from("conversations").select("mission_id").eq("id", conversationId).single();
+      resolvedMissionId = convo?.mission_id;
+    }
+
+    // Get-or-create active session (rolls a new one if last activity > 2h ago)
+    let sessionId: string | null = null;
+    if (resolvedMissionId) {
+      const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await supabase
+        .from("sessions").select("*")
+        .eq("user_id", user.id).eq("mission_id", resolvedMissionId)
+        .eq("status", "active").gte("started_at", cutoff)
+        .order("started_at", { ascending: false }).limit(1).maybeSingle();
+      if (existing) {
+        sessionId = existing.id;
+      } else {
+        const { data: created } = await supabase.from("sessions").insert({
+          user_id: user.id, mission_id: resolvedMissionId,
+          conversation_id: conversationId,
+          title: `Session ${new Date().toLocaleString()}`,
+          status: "active",
+        }).select().single();
+        sessionId = created?.id ?? null;
+      }
     }
 
     // Build conversation context from history
@@ -132,9 +162,44 @@ serve(async (req) => {
       content: msg.content,
     }));
 
-    await supabase.from("messages").insert(inserts);
+    const { data: insertedMsgs } = await supabase.from("messages").insert(inserts).select();
 
-    return new Response(JSON.stringify({ responses: agentResponses }), {
+    // Log agent_tasks with quick heuristic grade and bump session counters
+    if (sessionId && insertedMsgs) {
+      const tasks = insertedMsgs.map((m: any, i: number) => {
+        const resp = agentResponses[i];
+        const findings = (resp.content.match(/\b(found|detected|discovered|leak|exposed|cve|vuln|critical|high|medium|low)\b/gi) || []).length;
+        const len = resp.content.length;
+        const score = Math.min(100, 40 + findings * 8 + Math.min(30, Math.floor(len / 40)));
+        const grade = score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : score >= 60 ? "D" : "F";
+        return {
+          user_id: user.id,
+          mission_id: resolvedMissionId,
+          session_id: sessionId,
+          conversation_id: conversationId,
+          message_id: m.id,
+          agent_codename: resp.sender_name.toUpperCase().split(" ")[0],
+          agent_type: resp.role,
+          task_type: "response",
+          title: userMessage.slice(0, 80),
+          prompt: userMessage,
+          result: resp.content,
+          findings_count: findings,
+          grade,
+          grade_score: score,
+          grade_reason: `Auto: ${findings} signal terms, ${len} chars`,
+        };
+      });
+      await supabase.from("agent_tasks").insert(tasks);
+
+      const { data: cur } = await supabase.from("sessions").select("tasks_count, findings_count").eq("id", sessionId).single();
+      await supabase.from("sessions").update({
+        tasks_count: (cur?.tasks_count || 0) + tasks.length,
+        findings_count: (cur?.findings_count || 0) + tasks.reduce((s, t) => s + t.findings_count, 0),
+      }).eq("id", sessionId);
+    }
+
+    return new Response(JSON.stringify({ responses: agentResponses, sessionId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
