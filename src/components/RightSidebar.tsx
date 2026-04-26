@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,7 +7,7 @@ import {
   Users,
   Swords,
   Activity,
-  Circle,
+  FileText,
 } from "lucide-react";
 
 interface Agent {
