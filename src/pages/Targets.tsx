@@ -147,10 +147,11 @@ interface TargetStats {
   totalRewards: number;
   recentFindings: any[];
   recentTasks: any[];
+  allFindings: any[];
 }
 
 function emptyStats(): TargetStats {
-  return { total: 0, week: 0, month: 0, quarter: 0, year: 0, bySeverity: {}, totalRewards: 0, recentFindings: [], recentTasks: [] };
+  return { total: 0, week: 0, month: 0, quarter: 0, year: 0, bySeverity: {}, totalRewards: 0, recentFindings: [], recentTasks: [], allFindings: [] };
 }
 
 export default function Targets() {
