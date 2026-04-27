@@ -34,6 +34,7 @@ export default function AgentProfile() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [automations, setAutomations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [runningId, setRunningId] = useState<string | null>(null);
   const [newAuto, setNewAuto] = useState({ name: "", description: "", prompt_template: "", category: "" });
 
   useEffect(() => {
