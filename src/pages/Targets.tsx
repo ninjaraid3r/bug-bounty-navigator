@@ -333,14 +333,19 @@ function TargetDetail({ target }: { target: TargetMeta }) {
         <StatCard label="REWARDS" value={`$${stats.totalRewards.toLocaleString()}`} icon={DollarSign} accent />
       </div>
 
-      <Tabs defaultValue="program" className="w-full">
+      <Tabs defaultValue="charts" className="w-full">
         <TabsList className="font-mono text-xs">
+          <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="program">Program Info</TabsTrigger>
           <TabsTrigger value="payouts">Payout Tiers</TabsTrigger>
           <TabsTrigger value="proscons">Pros / Cons</TabsTrigger>
           <TabsTrigger value="findings">Latest Bugs ({stats.total})</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="charts" className="mt-4">
+          <TargetCharts findings={stats.allFindings} />
+        </TabsContent>
 
         <TabsContent value="program" className="mt-4 space-y-3">
           <Card className="p-4 bg-surface-1 border-border">
