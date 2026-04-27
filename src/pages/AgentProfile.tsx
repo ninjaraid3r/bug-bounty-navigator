@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2 } from "lucide-react";
+import { User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2, Loader2 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
