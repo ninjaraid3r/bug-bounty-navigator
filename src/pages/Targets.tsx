@@ -278,6 +278,7 @@ function TargetDetail({ target }: { target: TargetMeta }) {
     const yr = 365 * 86400_000;
 
     const s = emptyStats();
+    s.allFindings = findings || [];
     s.recentFindings = (findings || []).slice(0, 10);
     s.recentTasks = tasks || [];
     s.total = findings?.length || 0;
