@@ -45,26 +45,48 @@ export default function ConversationFeed() {
     setAgentsThinking(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mission-chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            conversationId: conversation?.id,
-            userMessage: text,
-            history: messages.slice(-20),
-          }),
-        }
-      );
+      const body = JSON.stringify({
+        conversationId: conversation?.id,
+        userMessage: text,
+        history: messages.slice(-20),
+      });
 
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || `Error ${resp.status}`);
+      // Retry on transient edge-runtime outages (503/504/502)
+      const TRANSIENT = new Set([502, 503, 504]);
+      const MAX_ATTEMPTS = 3;
+      let resp: Response | null = null;
+      let lastErr: any = null;
+
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          resp = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mission-chat`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session?.access_token}`,
+                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+              body,
+            }
+          );
+          if (resp.ok || !TRANSIENT.has(resp.status)) break;
+          lastErr = new Error(`Edge runtime ${resp.status} (attempt ${attempt}/${MAX_ATTEMPTS})`);
+        } catch (netErr) {
+          lastErr = netErr;
+        }
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, 1500 * attempt));
+        }
+      }
+
+      if (!resp || !resp.ok) {
+        if (resp && TRANSIENT.has(resp.status)) {
+          throw new Error("The agent service is temporarily unavailable. Please try again in a moment.");
+        }
+        const err = resp ? await resp.json().catch(() => ({ error: `Error ${resp!.status}` })) : { error: lastErr?.message };
+        throw new Error(err.error || `Error ${resp?.status ?? "network"}`);
       }
 
       await refresh();
