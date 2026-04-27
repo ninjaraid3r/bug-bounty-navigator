@@ -224,6 +224,19 @@ export default function AgentProfile() {
                       </div>
                       {a.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.description}</p>}
                       <pre className="mt-2 text-[10px] font-mono text-muted-foreground bg-background/50 p-2 rounded border border-border line-clamp-3 whitespace-pre-wrap">{a.prompt_template}</pre>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full mt-2 h-7 text-[11px] font-mono"
+                        disabled={runningId === a.id}
+                        onClick={() => runSkill(a)}
+                      >
+                        {runningId === a.id ? (
+                          <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Dispatching…</>
+                        ) : (
+                          <><Play className="w-3 h-3 mr-1" /> Run Skill</>
+                        )}
+                      </Button>
                     </div>
                   ))}
                 </div>
