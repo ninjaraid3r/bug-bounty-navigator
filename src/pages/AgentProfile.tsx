@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2 } from "lucide-react";
+import { User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2, Loader2 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,7 @@ export default function AgentProfile() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [automations, setAutomations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [runningId, setRunningId] = useState<string | null>(null);
   const [newAuto, setNewAuto] = useState({ name: "", description: "", prompt_template: "", category: "" });
 
   useEffect(() => {
@@ -86,6 +87,82 @@ export default function AgentProfile() {
     await supabase.from("automations").delete().eq("id", id);
     load();
   }
+
+  async function runSkill(automation: any) {
+    if (!user) return;
+    setRunningId(automation.id);
+    try {
+      // Resolve active mission + conversation
+      const { data: missions } = await supabase
+        .from("missions").select("*")
+        .eq("user_id", user.id).eq("status", "active")
+        .order("created_at", { ascending: false }).limit(1);
+      const mission = missions?.[0];
+      if (!mission) {
+        toast.error("No active mission. Open Recon to start one.");
+        return;
+      }
+      const target = mission.target?.trim();
+      if (!target || target === "target.com") {
+        toast.error("Set a valid mission target first (Recon → Target).");
+        return;
+      }
+
+      const { data: convos } = await supabase
+        .from("conversations").select("*")
+        .eq("mission_id", mission.id).eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(1);
+      const conversation = convos?.[0];
+      if (!conversation) {
+        toast.error("No conversation found for this mission.");
+        return;
+      }
+
+      // Substitute {target} placeholder
+      const prompt = automation.prompt_template.replaceAll("{target}", target);
+      const userMessage = `[Skill: ${automation.name}] ${prompt}`;
+
+      // Insert user message so it shows in feed
+      await supabase.from("messages").insert({
+        conversation_id: conversation.id,
+        user_id: user.id,
+        role: "user",
+        sender_name: "You",
+        content: userMessage,
+      });
+
+      // Pull short history for context
+      const { data: history } = await supabase
+        .from("messages").select("role, sender_name, content")
+        .eq("conversation_id", conversation.id)
+        .order("created_at", { ascending: false }).limit(20);
+
+      // Invoke mission-chat — it logs agent_tasks + session updates
+      const { error } = await supabase.functions.invoke("mission-chat", {
+        body: {
+          conversationId: conversation.id,
+          missionId: mission.id,
+          userMessage,
+          history: (history || []).reverse(),
+        },
+      });
+      if (error) throw error;
+
+      // Bump usage counters
+      await supabase.from("automations").update({
+        use_count: (automation.use_count || 0) + 1,
+        last_used_at: new Date().toISOString(),
+      }).eq("id", automation.id);
+
+      toast.success(`${automation.name} dispatched. Opening feed…`);
+      navigate("/");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to run skill");
+    } finally {
+      setRunningId(null);
+    }
+  }
+
 
   return (
     <AppLayout
@@ -147,6 +224,19 @@ export default function AgentProfile() {
                       </div>
                       {a.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.description}</p>}
                       <pre className="mt-2 text-[10px] font-mono text-muted-foreground bg-background/50 p-2 rounded border border-border line-clamp-3 whitespace-pre-wrap">{a.prompt_template}</pre>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full mt-2 h-7 text-[11px] font-mono"
+                        disabled={runningId === a.id}
+                        onClick={() => runSkill(a)}
+                      >
+                        {runningId === a.id ? (
+                          <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Dispatching…</>
+                        ) : (
+                          <><Play className="w-3 h-3 mr-1" /> Run Skill</>
+                        )}
+                      </Button>
                     </div>
                   ))}
                 </div>
