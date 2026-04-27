@@ -10,6 +10,10 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  LineChart, Line,
+} from "recharts";
 
 type TargetMeta = {
   name: string;
@@ -147,10 +151,11 @@ interface TargetStats {
   totalRewards: number;
   recentFindings: any[];
   recentTasks: any[];
+  allFindings: any[];
 }
 
 function emptyStats(): TargetStats {
-  return { total: 0, week: 0, month: 0, quarter: 0, year: 0, bySeverity: {}, totalRewards: 0, recentFindings: [], recentTasks: [] };
+  return { total: 0, week: 0, month: 0, quarter: 0, year: 0, bySeverity: {}, totalRewards: 0, recentFindings: [], recentTasks: [], allFindings: [] };
 }
 
 export default function Targets() {
@@ -277,6 +282,7 @@ function TargetDetail({ target }: { target: TargetMeta }) {
     const yr = 365 * 86400_000;
 
     const s = emptyStats();
+    s.allFindings = findings || [];
     s.recentFindings = (findings || []).slice(0, 10);
     s.recentTasks = tasks || [];
     s.total = findings?.length || 0;
@@ -331,14 +337,19 @@ function TargetDetail({ target }: { target: TargetMeta }) {
         <StatCard label="REWARDS" value={`$${stats.totalRewards.toLocaleString()}`} icon={DollarSign} accent />
       </div>
 
-      <Tabs defaultValue="program" className="w-full">
+      <Tabs defaultValue="charts" className="w-full">
         <TabsList className="font-mono text-xs">
+          <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="program">Program Info</TabsTrigger>
           <TabsTrigger value="payouts">Payout Tiers</TabsTrigger>
           <TabsTrigger value="proscons">Pros / Cons</TabsTrigger>
           <TabsTrigger value="findings">Latest Bugs ({stats.total})</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="charts" className="mt-4">
+          <TargetCharts findings={stats.allFindings} />
+        </TabsContent>
 
         <TabsContent value="program" className="mt-4 space-y-3">
           <Card className="p-4 bg-surface-1 border-border">
@@ -535,3 +546,166 @@ function SeverityBadge({ sev }: { sev: string }) {
     </span>
   );
 }
+
+// ============= CHARTS =============
+
+type Period = "week" | "month" | "quarter" | "year";
+
+const SEV_COLORS: Record<string, string> = {
+  critical: "hsl(var(--destructive))",
+  high: "#fb923c",
+  medium: "hsl(var(--primary))",
+  low: "#60a5fa",
+  info: "hsl(var(--muted-foreground))",
+};
+
+const SEV_ORDER = ["critical", "high", "medium", "low", "info"];
+
+function TargetCharts({ findings }: { findings: any[] }) {
+  const [period, setPeriod] = useState<Period>("month");
+
+  const { buckets, totalRewards, totalFindings } = useMemo(
+    () => buildBuckets(findings, period),
+    [findings, period],
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Period toggle */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex gap-1 bg-surface-2 border border-border rounded-md p-1">
+          {(["week", "month", "quarter", "year"] as Period[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`font-mono text-[10px] uppercase font-bold px-3 py-1 rounded transition-colors ${
+                period === p
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-4 font-mono text-[10px]">
+          <span className="text-muted-foreground">
+            FINDINGS: <span className="text-foreground font-bold">{totalFindings}</span>
+          </span>
+          <span className="text-muted-foreground">
+            REWARDS: <span className="text-primary font-bold">${totalRewards.toLocaleString()}</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Findings by severity (stacked bar) */}
+      <Card className="p-4 bg-surface-1 border-border">
+        <h4 className="font-mono text-xs font-bold text-foreground mb-3">
+          Findings by severity · <span className="text-muted-foreground uppercase">{period}</span>
+        </h4>
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={buckets} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(var(--border))" />
+              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(var(--border))" allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ backgroundColor: "hsl(var(--surface-1))", border: "1px solid hsl(var(--border))", fontSize: 11, fontFamily: "monospace" }}
+                cursor={{ fill: "hsl(var(--primary) / 0.1)" }}
+              />
+              <Legend wrapperStyle={{ fontSize: 10, fontFamily: "monospace" }} />
+              {SEV_ORDER.map((sev) => (
+                <Bar key={sev} dataKey={sev} stackId="a" fill={SEV_COLORS[sev]} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      {/* Rewards over time */}
+      <Card className="p-4 bg-surface-1 border-border">
+        <h4 className="font-mono text-xs font-bold text-foreground mb-3">
+          Rewards earned · <span className="text-muted-foreground uppercase">{period}</span>
+        </h4>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={buckets} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(var(--border))" />
+              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(var(--border))" tickFormatter={(v) => `$${v}`} />
+              <Tooltip
+                contentStyle={{ backgroundColor: "hsl(var(--surface-1))", border: "1px solid hsl(var(--border))", fontSize: 11, fontFamily: "monospace" }}
+                formatter={(v: any) => [`$${Number(v).toLocaleString()}`, "Rewards"]}
+              />
+              <Line type="monotone" dataKey="rewards" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: "hsl(var(--primary))", r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      {findings.length === 0 && (
+        <p className="font-mono text-[10px] text-muted-foreground text-center py-4">
+          No findings logged yet — charts will populate once your agents start reporting.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function buildBuckets(findings: any[], period: Period) {
+  // bucketCount: how many buckets, bucketMs: bucket size, label fn
+  const now = new Date();
+  let bucketCount: number;
+  let bucketMs: number;
+  let labelFn: (d: Date) => string;
+
+  if (period === "week") {
+    bucketCount = 7;
+    bucketMs = 86400_000;
+    labelFn = (d) => d.toLocaleDateString(undefined, { weekday: "short" });
+  } else if (period === "month") {
+    bucketCount = 4;
+    bucketMs = 7 * 86400_000;
+    labelFn = (d) => `W${Math.ceil(d.getDate() / 7)}`;
+  } else if (period === "quarter") {
+    bucketCount = 3;
+    bucketMs = 30 * 86400_000;
+    labelFn = (d) => d.toLocaleDateString(undefined, { month: "short" });
+  } else {
+    bucketCount = 12;
+    bucketMs = 30 * 86400_000;
+    labelFn = (d) => d.toLocaleDateString(undefined, { month: "short" });
+  }
+
+  const end = now.getTime();
+  const start = end - bucketCount * bucketMs;
+
+  const buckets = Array.from({ length: bucketCount }, (_, i) => {
+    const bucketStart = new Date(start + i * bucketMs);
+    return {
+      label: labelFn(bucketStart),
+      _start: start + i * bucketMs,
+      _end: start + (i + 1) * bucketMs,
+      critical: 0, high: 0, medium: 0, low: 0, info: 0,
+      rewards: 0,
+    } as any;
+  });
+
+  let totalRewards = 0;
+  let totalFindings = 0;
+
+  findings.forEach((f) => {
+    const ts = new Date(f.created_at).getTime();
+    if (ts < start || ts > end) return;
+    const idx = Math.min(bucketCount - 1, Math.floor((ts - start) / bucketMs));
+    const sev = (f.severity || "info").toLowerCase();
+    if (sev in buckets[idx]) buckets[idx][sev]++;
+    const reward = Number(f.reward_amount || 0);
+    buckets[idx].rewards += reward;
+    totalRewards += reward;
+    totalFindings++;
+  });
+
+  return { buckets, totalRewards, totalFindings };
+}
+
