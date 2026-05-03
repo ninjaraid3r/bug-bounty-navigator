@@ -32,7 +32,7 @@ serve(async (req) => {
       `[${t.agent_codename}] (grade ${t.grade}, ${t.findings_count} signals)\nUser asked: ${t.title}\nAgent: ${t.result?.slice(0, 600)}\n`
     ).join("\n---\n");
 
-    const systemPrompt = `You are Commander, the strategic manager of an offensive security agent team. Generate an honest after-action report from the session transcript. Be concise and tactical.`;
+    const systemPrompt = `You are Commander, the strategic manager of an offensive security agent team (Leads: PHANTOM=recon, VIPER=exploit, SPECTER=stealth). Generate an honest, deep after-action report. Pull out specific, reusable lessons graded High/Medium/Low. Identify CRITICAL changes — moments that should change how we run a task forever. For each Lead, list what they Found / Fixed / Created and concrete ways to make them better next session. Be tactical, never generic.`;
     const userPrompt = `Mission: ${mission?.name}  Target: ${mission?.target}\nTasks: ${tasks?.length || 0}  Findings signals: ${session.findings_count}\n\nTRANSCRIPT:\n${transcript || "(no activity)"}\n\nReturn ONLY JSON via the tool.`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
