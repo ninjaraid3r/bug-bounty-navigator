@@ -302,18 +302,27 @@ export default function SecondBrain() {
               {tools.length} TOOLS
             </span>
           </div>
-          <button
-            onClick={() => {
-              setEditingTool({
-                name: "", description: "", use_case: "", tags: [], difficulty: "intermediate",
-                category: Object.keys(categoryMeta)[0], is_default: false, bookmarked: false,
-              });
-              setShowForm(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-[10px] font-mono font-bold hover:bg-primary/20 transition-colors border border-primary/20"
-          >
-            <Plus className="w-3 h-3" /> ADD TOOL
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={syncEliteArsenal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-[10px] font-mono font-bold hover:bg-primary/90 transition-colors"
+              title="Add curated elite bug bounty arsenal"
+            >
+              <Sparkles className="w-3 h-3" /> SYNC ELITE ARSENAL
+            </button>
+            <button
+              onClick={() => {
+                setEditingTool({
+                  name: "", description: "", use_case: "", tags: [], difficulty: "intermediate",
+                  category: Object.keys(categoryMeta)[0], is_default: false, bookmarked: false,
+                });
+                setShowForm(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-[10px] font-mono font-bold hover:bg-primary/20 transition-colors border border-primary/20"
+            >
+              <Plus className="w-3 h-3" /> ADD TOOL
+            </button>
+          </div>
         </div>
 
         {/* Search */}
