@@ -20,8 +20,11 @@ export type Database = {
           agent_type: string
           conversation_id: string | null
           created_at: string
+          created_count: number
           duration_ms: number | null
           findings_count: number
+          fixed_count: number
+          found_count: number
           grade: string | null
           grade_reason: string | null
           grade_score: number | null
@@ -33,6 +36,7 @@ export type Database = {
           prompt: string | null
           result: string | null
           session_id: string | null
+          specialty_notes: string | null
           task_type: string
           title: string
           updated_at: string
@@ -43,8 +47,11 @@ export type Database = {
           agent_type: string
           conversation_id?: string | null
           created_at?: string
+          created_count?: number
           duration_ms?: number | null
           findings_count?: number
+          fixed_count?: number
+          found_count?: number
           grade?: string | null
           grade_reason?: string | null
           grade_score?: number | null
@@ -56,6 +63,7 @@ export type Database = {
           prompt?: string | null
           result?: string | null
           session_id?: string | null
+          specialty_notes?: string | null
           task_type?: string
           title: string
           updated_at?: string
@@ -66,8 +74,11 @@ export type Database = {
           agent_type?: string
           conversation_id?: string | null
           created_at?: string
+          created_count?: number
           duration_ms?: number | null
           findings_count?: number
+          fixed_count?: number
+          found_count?: number
           grade?: string | null
           grade_reason?: string | null
           grade_score?: number | null
@@ -79,6 +90,7 @@ export type Database = {
           prompt?: string | null
           result?: string | null
           session_id?: string | null
+          specialty_notes?: string | null
           task_type?: string
           title?: string
           updated_at?: string
@@ -370,67 +382,88 @@ export type Database = {
       }
       sessions: {
         Row: {
+          agent_insights: Json
           automations_suggested: Json | null
           conversation_id: string | null
           created_at: string
+          critical_changes: Json
           ended_at: string | null
           findings_count: number
           grade: string | null
           grade_notes: string | null
           grade_score: number | null
+          high_learnings: Json
           id: string
+          key_topic: string | null
           lessons_learned: string | null
+          low_learnings: Json
           manual_grade_override: boolean
+          medium_learnings: Json
           mission_id: string
           next_missions: Json | null
           started_at: string
           status: string
           summary: string | null
           tasks_count: number
+          team_improvements: Json
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          agent_insights?: Json
           automations_suggested?: Json | null
           conversation_id?: string | null
           created_at?: string
+          critical_changes?: Json
           ended_at?: string | null
           findings_count?: number
           grade?: string | null
           grade_notes?: string | null
           grade_score?: number | null
+          high_learnings?: Json
           id?: string
+          key_topic?: string | null
           lessons_learned?: string | null
+          low_learnings?: Json
           manual_grade_override?: boolean
+          medium_learnings?: Json
           mission_id: string
           next_missions?: Json | null
           started_at?: string
           status?: string
           summary?: string | null
           tasks_count?: number
+          team_improvements?: Json
           title?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          agent_insights?: Json
           automations_suggested?: Json | null
           conversation_id?: string | null
           created_at?: string
+          critical_changes?: Json
           ended_at?: string | null
           findings_count?: number
           grade?: string | null
           grade_notes?: string | null
           grade_score?: number | null
+          high_learnings?: Json
           id?: string
+          key_topic?: string | null
           lessons_learned?: string | null
+          low_learnings?: Json
           manual_grade_override?: boolean
+          medium_learnings?: Json
           mission_id?: string
           next_missions?: Json | null
           started_at?: string
           status?: string
           summary?: string | null
           tasks_count?: number
+          team_improvements?: Json
           title?: string
           updated_at?: string
           user_id?: string
