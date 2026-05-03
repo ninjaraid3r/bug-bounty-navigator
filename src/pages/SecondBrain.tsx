@@ -224,6 +224,27 @@ export default function SecondBrain() {
     }
   }
 
+  async function syncEliteArsenal() {
+    if (!user) return;
+    const existingNames = new Set(tools.map(t => t.name.toLowerCase()));
+    const toAdd = eliteArsenal.filter(t => !existingNames.has(t.name.toLowerCase()));
+    if (toAdd.length === 0) {
+      toast({ title: "Arsenal already synced", description: "All elite tools present." });
+      return;
+    }
+    const inserts = toAdd.map(t => ({ ...t, user_id: user.id, is_default: true, bookmarked: false }));
+    const { data, error } = await supabase.from("tools").insert(inserts).select();
+    if (error) {
+      toast({ title: "Sync failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (data) {
+      setTools(prev => [...prev, ...data.map(t => ({ ...t, use_case: t.use_case || "", tags: t.tags || [], difficulty: t.difficulty || "intermediate" }))]);
+      setExpandedCats(prev => new Set([...prev, ...data.map(t => t.category)]));
+      toast({ title: "Elite Arsenal synced", description: `${data.length} new tools added.` });
+    }
+  }
+
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
     tools.forEach(t => t.tags?.forEach(tag => tagSet.add(tag)));
