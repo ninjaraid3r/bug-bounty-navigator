@@ -73,6 +73,67 @@ const defaultTools: Omit<Tool, "id" | "is_default" | "bookmarked">[] = [
   { name: "BloodHound", description: "AD attack path mapping.", use_case: "Find shortest path to domain admin", tags: ["active-directory", "graph"], difficulty: "advanced", category: "Post-Exploitation" },
 ];
 
+// Elite arsenal — verified, high-impact tools used by top bug hunters (NahamSec, Jhaddix, STÖK, etc.)
+const eliteArsenal: Omit<Tool, "id" | "is_default" | "bookmarked">[] = [
+  // Recon
+  { name: "httpx", description: "Fast HTTP toolkit by ProjectDiscovery.", use_case: "Probe live hosts, status, tech detect at scale", tags: ["http", "probe", "projectdiscovery"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://github.com/projectdiscovery/httpx" },
+  { name: "naabu", description: "Fast SYN/CONNECT port scanner in Go.", use_case: "Mass port scan pipelines, faster than nmap for discovery", tags: ["port-scan", "fast"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://github.com/projectdiscovery/naabu" },
+  { name: "dnsx", description: "Fast DNS toolkit.", use_case: "Bulk DNS resolution, wildcard detection, brute-force", tags: ["dns", "fast"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://github.com/projectdiscovery/dnsx" },
+  { name: "katana", description: "Next-gen crawling and spidering framework.", use_case: "JS-aware crawl, headless mode, endpoint discovery", tags: ["crawler", "js"], difficulty: "intermediate", category: "Reconnaissance", website_url: "https://github.com/projectdiscovery/katana" },
+  { name: "gau", description: "Get All URLs from Wayback, AlienVault, CommonCrawl.", use_case: "Pull historical URLs to find forgotten endpoints", tags: ["wayback", "urls"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://github.com/lc/gau" },
+  { name: "waybackurls", description: "Fetch URLs from the Wayback Machine.", use_case: "Discover legacy endpoints and parameters", tags: ["wayback", "history"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://github.com/tomnomnom/waybackurls" },
+  { name: "assetfinder", description: "Find related domains and subdomains.", use_case: "Quick passive subdomain discovery", tags: ["subdomain", "passive"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://github.com/tomnomnom/assetfinder" },
+  { name: "chaos", description: "ProjectDiscovery's continuously updated subdomain dataset.", use_case: "Pull pre-collected subdomains for in-scope programs", tags: ["subdomain", "dataset"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://chaos.projectdiscovery.io" },
+  { name: "Censys", description: "Internet-wide scanning search engine.", use_case: "Find exposed assets, certs, services", tags: ["osint", "scanning"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://censys.io" },
+  { name: "FOFA", description: "China-based internet asset search engine.", use_case: "Discover assets often missed by Shodan", tags: ["osint", "search-engine"], difficulty: "intermediate", category: "Reconnaissance", website_url: "https://fofa.info" },
+
+  // Web App
+  { name: "Caido", description: "Modern web proxy alternative to Burp.", use_case: "Lightweight intercept, projects, replay, automation", tags: ["proxy", "modern"], difficulty: "intermediate", category: "Web App Scanning", website_url: "https://caido.io" },
+  { name: "Param Miner", description: "Burp extension for hidden parameter discovery.", use_case: "Find unlinked parameters, headers, cookies", tags: ["burp-ext", "params"], difficulty: "intermediate", category: "Web App Scanning", website_url: "https://github.com/PortSwigger/param-miner" },
+  { name: "Autorize", description: "Burp extension for automated authz testing.", use_case: "Detect IDOR/BOLA across roles automatically", tags: ["burp-ext", "idor", "authz"], difficulty: "intermediate", category: "Web App Scanning", website_url: "https://github.com/Quitten/Autorize" },
+  { name: "Turbo Intruder", description: "High-speed Burp request engine.", use_case: "Race conditions, mass fuzzing at 30k req/s", tags: ["burp-ext", "race"], difficulty: "advanced", category: "Web App Scanning" },
+  { name: "Dalfox", description: "Powerful XSS scanner and parameter analyzer.", use_case: "Detect reflected/stored/DOM XSS automatically", tags: ["xss", "scanner"], difficulty: "intermediate", category: "Web App Scanning", website_url: "https://github.com/hahwul/dalfox" },
+  { name: "kxss", description: "Find reflected XSS candidates in URLs.", use_case: "Pipe URLs in, get likely reflection params out", tags: ["xss", "reflection"], difficulty: "beginner", category: "Web App Scanning", website_url: "https://github.com/Emoe/kxss" },
+  { name: "interactsh", description: "OOB (Out-of-Band) interaction server.", use_case: "Detect blind SSRF/RCE/XXE via DNS/HTTP callback", tags: ["oob", "blind"], difficulty: "intermediate", category: "Web App Scanning", website_url: "https://github.com/projectdiscovery/interactsh" },
+
+  // API
+  { name: "kiterunner", description: "API content discovery (Assetnote).", use_case: "Brute-force API routes with smart wordlists", tags: ["api", "discovery"], difficulty: "intermediate", category: "Fuzzing & Brute Force", website_url: "https://github.com/assetnote/kiterunner" },
+  { name: "GraphQLmap", description: "GraphQL pentesting tool.", use_case: "Introspection, batching, injection on GraphQL", tags: ["graphql", "api"], difficulty: "intermediate", category: "Web App Scanning", website_url: "https://github.com/swisskyrepo/GraphQLmap" },
+  { name: "Postman", description: "API design and testing platform.", use_case: "Manual API exploration, collections, fuzzing", tags: ["api", "manual"], difficulty: "beginner", category: "Web App Scanning", website_url: "https://postman.com" },
+
+  // JS / Secrets
+  { name: "subjs", description: "Fetch JavaScript files from URLs.", use_case: "Pull all JS for secret/endpoint mining", tags: ["js", "discovery"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://github.com/lc/subjs" },
+  { name: "LinkFinder", description: "Discover endpoints in JS files.", use_case: "Parse minified JS to find hidden API routes", tags: ["js", "endpoints"], difficulty: "beginner", category: "Reconnaissance", website_url: "https://github.com/GerbenJavado/LinkFinder" },
+  { name: "TruffleHog", description: "Find leaked secrets in git, JS, S3 buckets.", use_case: "Detect API keys, tokens, creds across sources", tags: ["secrets", "git"], difficulty: "beginner", category: "OSINT & Social", website_url: "https://github.com/trufflesecurity/trufflehog" },
+  { name: "gitleaks", description: "Scan git repos for secrets.", use_case: "Pre-commit and historical secret detection", tags: ["secrets", "git"], difficulty: "beginner", category: "OSINT & Social", website_url: "https://github.com/gitleaks/gitleaks" },
+
+  // Wordlists / Fuzzing
+  { name: "SecLists", description: "Massive collection of security wordlists.", use_case: "Use for any fuzzing/brute-force task", tags: ["wordlists", "essential"], difficulty: "beginner", category: "Fuzzing & Brute Force", website_url: "https://github.com/danielmiessler/SecLists" },
+  { name: "Assetnote Wordlists", description: "Continuously updated content discovery wordlists.", use_case: "Higher-signal alternative to common wordlists", tags: ["wordlists", "assetnote"], difficulty: "beginner", category: "Fuzzing & Brute Force", website_url: "https://wordlists.assetnote.io" },
+  { name: "Arjun", description: "HTTP parameter discovery suite.", use_case: "Find hidden GET/POST/JSON params", tags: ["params", "fuzzing"], difficulty: "beginner", category: "Fuzzing & Brute Force", website_url: "https://github.com/s0md3v/Arjun" },
+
+  // Cloud
+  { name: "ScoutSuite", description: "Multi-cloud security auditing tool.", use_case: "Audit AWS/GCP/Azure/Aliyun configs", tags: ["cloud", "audit"], difficulty: "intermediate", category: "Cloud & Infrastructure", website_url: "https://github.com/nccgroup/ScoutSuite" },
+  { name: "CloudSploit", description: "Cloud security configuration scanner.", use_case: "Continuous misconfig detection across clouds", tags: ["cloud", "misconfig"], difficulty: "intermediate", category: "Cloud & Infrastructure" },
+  { name: "S3Scanner", description: "Scan for open AWS S3 buckets.", use_case: "Find publicly readable/writable buckets", tags: ["aws", "s3"], difficulty: "beginner", category: "Cloud & Infrastructure", website_url: "https://github.com/sa7mon/S3Scanner" },
+  { name: "Pacu", description: "AWS exploitation framework by Rhino Security.", use_case: "Post-exploitation attacks on AWS environments", tags: ["aws", "post-exploit"], difficulty: "advanced", category: "Cloud & Infrastructure", website_url: "https://github.com/RhinoSecurityLabs/pacu" },
+
+  // Mobile
+  { name: "Objection", description: "Runtime mobile exploration toolkit (Frida-based).", use_case: "Bypass SSL pinning, dump keychain, no-code Frida", tags: ["mobile", "frida"], difficulty: "intermediate", category: "Mobile Security", website_url: "https://github.com/sensepost/objection" },
+  { name: "apktool", description: "Reverse engineering APK files.", use_case: "Decompile, modify, rebuild Android apps", tags: ["android", "reverse"], difficulty: "intermediate", category: "Mobile Security", website_url: "https://apktool.org" },
+
+  // OSINT
+  { name: "GitDorker", description: "Automated GitHub dorking for secrets.", use_case: "Find leaked creds in target's GitHub orgs", tags: ["github", "dorking"], difficulty: "beginner", category: "OSINT & Social", website_url: "https://github.com/obheda12/GitDorker" },
+  { name: "theHarvester", description: "Email, name, subdomain harvester.", use_case: "Passive recon for emails and employees", tags: ["osint", "emails"], difficulty: "beginner", category: "OSINT & Social", website_url: "https://github.com/laramies/theHarvester" },
+  { name: "Spiderfoot", description: "Automated OSINT collection (200+ modules).", use_case: "Full automated OSINT footprinting", tags: ["osint", "automation"], difficulty: "intermediate", category: "OSINT & Social", website_url: "https://spiderfoot.net" },
+
+  // Reporting / Workflow
+  { name: "notify", description: "ProjectDiscovery alerting tool.", use_case: "Pipe results to Slack/Discord/Telegram", tags: ["alerts", "workflow"], difficulty: "beginner", category: "Reporting & Workflow", website_url: "https://github.com/projectdiscovery/notify" },
+  { name: "Obsidian", description: "Knowledge base for hunters.", use_case: "Note-taking, target dossiers, methodology", tags: ["notes", "workflow"], difficulty: "beginner", category: "Reporting & Workflow", website_url: "https://obsidian.md" },
+  { name: "ReconFTW", description: "Full automated recon framework.", use_case: "End-to-end recon pipeline orchestration", tags: ["automation", "framework"], difficulty: "advanced", category: "Reporting & Workflow", website_url: "https://github.com/six2dez/reconftw" },
+  { name: "Axiom", description: "Dynamic infra framework for hunters.", use_case: "Spin up cloud workers for distributed scans", tags: ["infra", "scaling"], difficulty: "advanced", category: "Reporting & Workflow", website_url: "https://github.com/pry0cc/axiom" },
+];
+
 export default function SecondBrain() {
   const { user } = useAuth();
   const { toast } = useToast();
