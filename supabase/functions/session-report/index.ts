@@ -76,8 +76,37 @@ serve(async (req) => {
                     required: ["title"],
                   },
                 },
+                key_topic: { type: "string", description: "One short phrase capturing the central learning topic of this session" },
+                high_learnings: { type: "array", items: { type: "string" }, description: "High-impact takeaways" },
+                medium_learnings: { type: "array", items: { type: "string" } },
+                low_learnings: { type: "array", items: { type: "string" } },
+                critical_changes: {
+                  type: "array",
+                  description: "Things so important they change how we perform a task going forward",
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string" },
+                      old_behavior: { type: "string" },
+                      new_behavior: { type: "string" },
+                      reason: { type: "string" },
+                    },
+                    required: ["title", "new_behavior"],
+                  },
+                },
+                agent_insights: {
+                  type: "object",
+                  description: "Per-agent breakdown keyed by codename: COMMANDER, PHANTOM, VIPER, SPECTER",
+                  properties: {
+                    COMMANDER: { type: "object", properties: { found: { type: "array", items: { type: "string" } }, fixed: { type: "array", items: { type: "string" } }, created: { type: "array", items: { type: "string" } }, improvements: { type: "array", items: { type: "string" } }, grade: { type: "string" } } },
+                    PHANTOM:   { type: "object", properties: { found: { type: "array", items: { type: "string" } }, fixed: { type: "array", items: { type: "string" } }, created: { type: "array", items: { type: "string" } }, improvements: { type: "array", items: { type: "string" } }, grade: { type: "string" } } },
+                    VIPER:     { type: "object", properties: { found: { type: "array", items: { type: "string" } }, fixed: { type: "array", items: { type: "string" } }, created: { type: "array", items: { type: "string" } }, improvements: { type: "array", items: { type: "string" } }, grade: { type: "string" } } },
+                    SPECTER:   { type: "object", properties: { found: { type: "array", items: { type: "string" } }, fixed: { type: "array", items: { type: "string" } }, created: { type: "array", items: { type: "string" } }, improvements: { type: "array", items: { type: "string" } }, grade: { type: "string" } } },
+                  },
+                },
+                team_improvements: { type: "array", items: { type: "string" }, description: "Cross-team process improvements" },
               },
-              required: ["summary", "grade", "grade_score", "lessons_learned"],
+              required: ["summary", "grade", "grade_score", "lessons_learned", "key_topic", "high_learnings", "agent_insights"],
             },
           },
         }],
@@ -106,6 +135,13 @@ serve(async (req) => {
       grade: session.manual_grade_override ? session.grade : report.grade,
       grade_score: session.manual_grade_override ? session.grade_score : report.grade_score,
       grade_notes: report.grade_notes,
+      key_topic: report.key_topic || null,
+      high_learnings: report.high_learnings || [],
+      medium_learnings: report.medium_learnings || [],
+      low_learnings: report.low_learnings || [],
+      critical_changes: report.critical_changes || [],
+      agent_insights: report.agent_insights || {},
+      team_improvements: report.team_improvements || [],
     }).eq("id", sessionId);
 
     return new Response(JSON.stringify({ report }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
