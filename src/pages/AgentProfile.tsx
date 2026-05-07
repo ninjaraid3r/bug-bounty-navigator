@@ -185,7 +185,7 @@ export default function AgentProfile() {
 
   async function clearSessionField(id: string, patch: Record<string, any>) {
     if (!confirm("Clear this memory section?")) return;
-    const { error } = await supabase.from("sessions").update(patch).eq("id", id);
+    const { error } = await supabase.from("sessions").update(patch as any).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Cleared");
     load();
