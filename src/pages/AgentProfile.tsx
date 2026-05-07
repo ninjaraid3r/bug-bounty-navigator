@@ -474,7 +474,10 @@ export default function AgentProfile() {
                               <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{new Date(t.created_at).toLocaleString()} · {t.findings_count} signals</div>
                               {t.result && <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{t.result}</p>}
                             </div>
-                            <div className={`text-2xl font-mono font-bold ${gradeColor(t.grade)} shrink-0`}>{t.grade || "—"}</div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className={`text-2xl font-mono font-bold ${gradeColor(t.grade)}`}>{t.grade || "—"}</div>
+                              <button onClick={() => deleteTask(t.id)} className="text-muted-foreground hover:text-destructive" title="Delete task"><Trash2 className="w-3 h-3" /></button>
+                            </div>
                           </div>
                         </div>
                       ))}
