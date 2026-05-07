@@ -294,11 +294,17 @@ export default function AgentProfile() {
                             </div>
                           </div>
                         </CollapsibleTrigger>
-                        <div className="flex gap-2 shrink-0">
+                        <div className="flex gap-1 shrink-0">
                           <Button size="sm" variant="outline" onClick={() => generateSessionMemory(s.id)} disabled={generatingId === s.id} className="h-7 text-[11px]">
                             {generatingId === s.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating…</> : <><Sparkles className="w-3 h-3 mr-1" /> {hasMemory ? "Regenerate" : "Generate Memory"}</>}
                           </Button>
+                          {meta.type !== "raider" && (
+                            <Button size="sm" variant="outline" onClick={() => leadReviewSession(s.id)} disabled={reviewingId === s.id} className="h-7 text-[11px]" title={`${meta.name} reviews this session and creates new automations`}>
+                              {reviewingId === s.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Reviewing…</> : <><BookOpen className="w-3 h-3 mr-1" /> Lead Review</>}
+                            </Button>
+                          )}
                           <Button size="sm" variant="ghost" onClick={() => navigate(`/commander/sessions/${s.id}`)} className="h-7 text-[11px]"><FileText className="w-3 h-3 mr-1" /> Full</Button>
+                          <Button size="sm" variant="ghost" onClick={() => deleteSession(s.id)} className="h-7 text-[11px] text-muted-foreground hover:text-destructive" title="Delete session memory"><Trash2 className="w-3 h-3" /></Button>
                         </div>
                       </div>
                     </CardHeader>
