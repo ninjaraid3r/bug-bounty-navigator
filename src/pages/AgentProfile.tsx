@@ -312,23 +312,40 @@ export default function AgentProfile() {
                       <CardContent className="pt-0 space-y-3">
                         {s.summary && <p className="text-xs text-foreground">{s.summary}</p>}
 
+                        <div className="flex flex-wrap gap-1.5">
+                          {(s.high_learnings?.length || s.medium_learnings?.length || s.low_learnings?.length) ? (
+                            <ClearChip onClick={() => clearSessionField(s.id, { high_learnings: [], medium_learnings: [], low_learnings: [] })}>Clear Learnings</ClearChip>
+                          ) : null}
+                          {s.critical_changes?.length ? (
+                            <ClearChip onClick={() => clearSessionField(s.id, { critical_changes: [] })}>Clear Critical</ClearChip>
+                          ) : null}
+                          {ins ? <ClearChip onClick={() => removeAgentInsights(s)}>Clear {meta.name} Insights</ClearChip> : null}
+                          {isCommander && s.team_improvements?.length ? (
+                            <ClearChip onClick={() => clearSessionField(s.id, { team_improvements: [] })}>Clear Team Improvements</ClearChip>
+                          ) : null}
+                          {s.summary ? <ClearChip onClick={() => clearSessionField(s.id, { summary: null, lessons_learned: null })}>Clear Summary</ClearChip> : null}
+                        </div>
+
                         {Array.isArray(s.critical_changes) && s.critical_changes.length > 0 && (
-                          <Section icon={AlertTriangle} label="Critical Changes — How We Work Now" tone="destructive">
+                          <Section icon={AlertTriangle} label="Critical Changes" tone="destructive">
                             {s.critical_changes.map((c: any, i: number) => (
-                              <div key={i} className="border-l-2 border-destructive pl-2 py-1">
-                                <div className="text-xs font-semibold text-foreground">{c.title}</div>
-                                {c.old_behavior && <div className="text-[10px] text-muted-foreground">Was: {c.old_behavior}</div>}
-                                <div className="text-[11px] text-primary">Now: {c.new_behavior}</div>
-                                {c.reason && <div className="text-[10px] text-muted-foreground italic">{c.reason}</div>}
+                              <div key={i} className="border-l-2 border-destructive pl-2 py-1 group/item flex items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-semibold text-foreground">{c.title}</div>
+                                  {c.old_behavior && <div className="text-[10px] text-muted-foreground">Was: {c.old_behavior}</div>}
+                                  <div className="text-[11px] text-primary">Now: {c.new_behavior}</div>
+                                  {c.reason && <div className="text-[10px] text-muted-foreground italic">{c.reason}</div>}
+                                </div>
+                                <button onClick={() => clearSessionField(s.id, { critical_changes: s.critical_changes.filter((_: any, j: number) => j !== i) })} className="opacity-0 group-hover/item:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"><X className="w-3 h-3" /></button>
                               </div>
                             ))}
                           </Section>
                         )}
 
                         <div className="grid md:grid-cols-3 gap-2">
-                          <LearnList label="High" tone="primary" items={s.high_learnings} />
-                          <LearnList label="Medium" tone="foreground" items={s.medium_learnings} />
-                          <LearnList label="Low" tone="muted" items={s.low_learnings} />
+                          <LearnList label="High" tone="primary" items={s.high_learnings} onRemove={(i) => clearSessionField(s.id, { high_learnings: (s.high_learnings || []).filter((_: any, j: number) => j !== i) })} />
+                          <LearnList label="Medium" tone="foreground" items={s.medium_learnings} onRemove={(i) => clearSessionField(s.id, { medium_learnings: (s.medium_learnings || []).filter((_: any, j: number) => j !== i) })} />
+                          <LearnList label="Low" tone="muted" items={s.low_learnings} onRemove={(i) => clearSessionField(s.id, { low_learnings: (s.low_learnings || []).filter((_: any, j: number) => j !== i) })} />
                         </div>
 
                         {ins && (
