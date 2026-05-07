@@ -61,13 +61,29 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, userMessage, history, missionId } = await req.json();
+    const { conversationId, userMessage, history, missionId, extraLeads } = await req.json();
     if (!conversationId || !userMessage) {
       return new Response(JSON.stringify({ error: "Missing conversationId or userMessage" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Normalize user-deployed extra leads from the sidebar
+    const dynamicLeads = Array.isArray(extraLeads)
+      ? extraLeads
+          .filter((l: any) => l && typeof l.codename === "string" && typeof l.prompt === "string")
+          .slice(0, 8)
+          .map((l: any) => {
+            const codename = String(l.codename).toUpperCase().trim();
+            return {
+              role: "lead" as const,
+              codename,
+              sender_name: `${codename.charAt(0)}${codename.slice(1).toLowerCase()} Lead`,
+              personality: l.prompt,
+            };
+          })
+      : [];
 
     // Resolve mission
     let resolvedMissionId = missionId as string | undefined;
@@ -135,7 +151,9 @@ serve(async (req) => {
     });
 
     // If no specific lead triggered, activate all leads
-    const leadsToRun = activeLeads.length > 0 ? activeLeads : AGENT_CHAIN.slice(1);
+    const baseLeadsToRun = activeLeads.length > 0 ? activeLeads : AGENT_CHAIN.slice(1);
+    // Always include user-deployed specialist leads from the sidebar
+    const leadsToRun = [...baseLeadsToRun, ...dynamicLeads];
 
     // Run leads in parallel
     const leadPromises = leadsToRun.map(async (lead) => {

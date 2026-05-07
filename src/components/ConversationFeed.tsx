@@ -45,10 +45,20 @@ export default function ConversationFeed() {
     setAgentsThinking(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      let extraLeads: any[] = [];
+      try {
+        const raw = localStorage.getItem("liq.activeLeads");
+        if (raw) {
+          extraLeads = (JSON.parse(raw) || [])
+            .filter((l: any) => l && l.name && l.prompt)
+            .map((l: any) => ({ codename: l.name, role: l.role, prompt: l.prompt }));
+        }
+      } catch {}
       const body = JSON.stringify({
         conversationId: conversation?.id,
         userMessage: text,
         history: messages.slice(-20),
+        extraLeads,
       });
 
       // Retry on transient edge-runtime outages (503/504/502)
