@@ -149,6 +149,55 @@ export default function AgentProfile() {
     }
   }
 
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  async function leadReviewSession(sessionId: string) {
+    setReviewingId(sessionId);
+    try {
+      const { data, error } = await supabase.functions.invoke("lead-review", {
+        body: { sessionId, agentCodename: meta.name },
+      });
+      if (error) throw error;
+      const n = data?.automations?.length || 0;
+      toast.success(`${meta.name} review complete · ${n} new skill${n === 1 ? "" : "s"}`);
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Review failed");
+    } finally {
+      setReviewingId(null);
+    }
+  }
+
+  async function deleteSession(id: string) {
+    if (!confirm("Delete this session memory permanently?")) return;
+    const { error } = await supabase.from("sessions").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Session deleted");
+    load();
+  }
+
+  async function deleteTask(id: string) {
+    if (!confirm("Delete this task entry?")) return;
+    const { error } = await supabase.from("agent_tasks").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Task deleted");
+    load();
+  }
+
+  async function clearSessionField(id: string, patch: Record<string, any>) {
+    if (!confirm("Clear this memory section?")) return;
+    const { error } = await supabase.from("sessions").update(patch).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Cleared");
+    load();
+  }
+
+  async function removeAgentInsights(s: any) {
+    const next = { ...(s.agent_insights || {}) };
+    delete next[meta.name];
+    await clearSessionField(s.id, { agent_insights: next });
+  }
+
+
   async function saveAutomation() {
     if (!newAuto.name || !newAuto.prompt_template) return toast.error("Name and prompt template required");
     const { error } = await supabase.from("automations").insert({
