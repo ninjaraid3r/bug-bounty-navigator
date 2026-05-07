@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2, Loader2,
   Brain, Sparkles, AlertTriangle, Wrench, Search, Hammer, TrendingUp, FileText,
+  Eraser, X, BookOpen,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -148,6 +149,55 @@ export default function AgentProfile() {
     }
   }
 
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  async function leadReviewSession(sessionId: string) {
+    setReviewingId(sessionId);
+    try {
+      const { data, error } = await supabase.functions.invoke("lead-review", {
+        body: { sessionId, agentCodename: meta.name },
+      });
+      if (error) throw error;
+      const n = data?.automations?.length || 0;
+      toast.success(`${meta.name} review complete · ${n} new skill${n === 1 ? "" : "s"}`);
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Review failed");
+    } finally {
+      setReviewingId(null);
+    }
+  }
+
+  async function deleteSession(id: string) {
+    if (!confirm("Delete this session memory permanently?")) return;
+    const { error } = await supabase.from("sessions").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Session deleted");
+    load();
+  }
+
+  async function deleteTask(id: string) {
+    if (!confirm("Delete this task entry?")) return;
+    const { error } = await supabase.from("agent_tasks").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Task deleted");
+    load();
+  }
+
+  async function clearSessionField(id: string, patch: Record<string, any>) {
+    if (!confirm("Clear this memory section?")) return;
+    const { error } = await supabase.from("sessions").update(patch as any).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Cleared");
+    load();
+  }
+
+  async function removeAgentInsights(s: any) {
+    const next = { ...(s.agent_insights || {}) };
+    delete next[meta.name];
+    await clearSessionField(s.id, { agent_insights: next });
+  }
+
+
   async function saveAutomation() {
     if (!newAuto.name || !newAuto.prompt_template) return toast.error("Name and prompt template required");
     const { error } = await supabase.from("automations").insert({
@@ -244,11 +294,17 @@ export default function AgentProfile() {
                             </div>
                           </div>
                         </CollapsibleTrigger>
-                        <div className="flex gap-2 shrink-0">
+                        <div className="flex gap-1 shrink-0">
                           <Button size="sm" variant="outline" onClick={() => generateSessionMemory(s.id)} disabled={generatingId === s.id} className="h-7 text-[11px]">
                             {generatingId === s.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating…</> : <><Sparkles className="w-3 h-3 mr-1" /> {hasMemory ? "Regenerate" : "Generate Memory"}</>}
                           </Button>
+                          {meta.type !== "raider" && (
+                            <Button size="sm" variant="outline" onClick={() => leadReviewSession(s.id)} disabled={reviewingId === s.id} className="h-7 text-[11px]" title={`${meta.name} reviews this session and creates new automations`}>
+                              {reviewingId === s.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Reviewing…</> : <><BookOpen className="w-3 h-3 mr-1" /> Lead Review</>}
+                            </Button>
+                          )}
                           <Button size="sm" variant="ghost" onClick={() => navigate(`/commander/sessions/${s.id}`)} className="h-7 text-[11px]"><FileText className="w-3 h-3 mr-1" /> Full</Button>
+                          <Button size="sm" variant="ghost" onClick={() => deleteSession(s.id)} className="h-7 text-[11px] text-muted-foreground hover:text-destructive" title="Delete session memory"><Trash2 className="w-3 h-3" /></Button>
                         </div>
                       </div>
                     </CardHeader>
@@ -256,23 +312,40 @@ export default function AgentProfile() {
                       <CardContent className="pt-0 space-y-3">
                         {s.summary && <p className="text-xs text-foreground">{s.summary}</p>}
 
+                        <div className="flex flex-wrap gap-1.5">
+                          {(s.high_learnings?.length || s.medium_learnings?.length || s.low_learnings?.length) ? (
+                            <ClearChip onClick={() => clearSessionField(s.id, { high_learnings: [], medium_learnings: [], low_learnings: [] })}>Clear Learnings</ClearChip>
+                          ) : null}
+                          {s.critical_changes?.length ? (
+                            <ClearChip onClick={() => clearSessionField(s.id, { critical_changes: [] })}>Clear Critical</ClearChip>
+                          ) : null}
+                          {ins ? <ClearChip onClick={() => removeAgentInsights(s)}>Clear {meta.name} Insights</ClearChip> : null}
+                          {isCommander && s.team_improvements?.length ? (
+                            <ClearChip onClick={() => clearSessionField(s.id, { team_improvements: [] })}>Clear Team Improvements</ClearChip>
+                          ) : null}
+                          {s.summary ? <ClearChip onClick={() => clearSessionField(s.id, { summary: null, lessons_learned: null })}>Clear Summary</ClearChip> : null}
+                        </div>
+
                         {Array.isArray(s.critical_changes) && s.critical_changes.length > 0 && (
-                          <Section icon={AlertTriangle} label="Critical Changes — How We Work Now" tone="destructive">
+                          <Section icon={AlertTriangle} label="Critical Changes" tone="destructive">
                             {s.critical_changes.map((c: any, i: number) => (
-                              <div key={i} className="border-l-2 border-destructive pl-2 py-1">
-                                <div className="text-xs font-semibold text-foreground">{c.title}</div>
-                                {c.old_behavior && <div className="text-[10px] text-muted-foreground">Was: {c.old_behavior}</div>}
-                                <div className="text-[11px] text-primary">Now: {c.new_behavior}</div>
-                                {c.reason && <div className="text-[10px] text-muted-foreground italic">{c.reason}</div>}
+                              <div key={i} className="border-l-2 border-destructive pl-2 py-1 group/item flex items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-semibold text-foreground">{c.title}</div>
+                                  {c.old_behavior && <div className="text-[10px] text-muted-foreground">Was: {c.old_behavior}</div>}
+                                  <div className="text-[11px] text-primary">Now: {c.new_behavior}</div>
+                                  {c.reason && <div className="text-[10px] text-muted-foreground italic">{c.reason}</div>}
+                                </div>
+                                <button onClick={() => clearSessionField(s.id, { critical_changes: s.critical_changes.filter((_: any, j: number) => j !== i) })} className="opacity-0 group-hover/item:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"><X className="w-3 h-3" /></button>
                               </div>
                             ))}
                           </Section>
                         )}
 
                         <div className="grid md:grid-cols-3 gap-2">
-                          <LearnList label="High" tone="primary" items={s.high_learnings} />
-                          <LearnList label="Medium" tone="foreground" items={s.medium_learnings} />
-                          <LearnList label="Low" tone="muted" items={s.low_learnings} />
+                          <LearnList label="High" tone="primary" items={s.high_learnings} onRemove={(i) => clearSessionField(s.id, { high_learnings: (s.high_learnings || []).filter((_: any, j: number) => j !== i) })} />
+                          <LearnList label="Medium" tone="foreground" items={s.medium_learnings} onRemove={(i) => clearSessionField(s.id, { medium_learnings: (s.medium_learnings || []).filter((_: any, j: number) => j !== i) })} />
+                          <LearnList label="Low" tone="muted" items={s.low_learnings} onRemove={(i) => clearSessionField(s.id, { low_learnings: (s.low_learnings || []).filter((_: any, j: number) => j !== i) })} />
                         </div>
 
                         {ins && (
@@ -401,7 +474,10 @@ export default function AgentProfile() {
                               <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{new Date(t.created_at).toLocaleString()} · {t.findings_count} signals</div>
                               {t.result && <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{t.result}</p>}
                             </div>
-                            <div className={`text-2xl font-mono font-bold ${gradeColor(t.grade)} shrink-0`}>{t.grade || "—"}</div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className={`text-2xl font-mono font-bold ${gradeColor(t.grade)}`}>{t.grade || "—"}</div>
+                              <button onClick={() => deleteTask(t.id)} className="text-muted-foreground hover:text-destructive" title="Delete task"><Trash2 className="w-3 h-3" /></button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -438,15 +514,31 @@ function Section({ icon: Icon, label, tone, children }: { icon: any; label: stri
   );
 }
 
-function LearnList({ label, tone, items }: { label: string; tone: "primary" | "foreground" | "muted"; items?: string[] }) {
+function LearnList({ label, tone, items, onRemove }: { label: string; tone: "primary" | "foreground" | "muted"; items?: string[]; onRemove?: (i: number) => void }) {
   const color = tone === "primary" ? "text-primary" : tone === "foreground" ? "text-foreground" : "text-muted-foreground";
   return (
     <div className="border border-border rounded-md p-2 bg-background/40">
       <div className={`text-[10px] font-mono font-bold uppercase tracking-widest ${color} mb-1`}>{label} Learnings</div>
       {Array.isArray(items) && items.length > 0
-        ? <ul className="text-[11px] text-muted-foreground space-y-0.5 list-disc pl-4">{items.map((x, i) => <li key={i}>{x}</li>)}</ul>
+        ? <ul className="text-[11px] text-muted-foreground space-y-0.5">
+            {items.map((x, i) => (
+              <li key={i} className="flex items-start gap-1 group/li">
+                <span className="text-primary">•</span>
+                <span className="flex-1">{x}</span>
+                {onRemove && <button onClick={() => onRemove(i)} className="opacity-0 group-hover/li:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"><X className="w-3 h-3" /></button>}
+              </li>
+            ))}
+          </ul>
         : <p className="text-[10px] text-muted-foreground italic">None.</p>}
     </div>
+  );
+}
+
+function ClearChip({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-surface-2/40 hover:border-destructive hover:text-destructive text-[10px] font-mono text-muted-foreground transition-colors">
+      <Eraser className="w-2.5 h-2.5" /> {children}
+    </button>
   );
 }
 
