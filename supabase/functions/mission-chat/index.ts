@@ -61,7 +61,12 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, userMessage, history, missionId, extraLeads } = await req.json();
+    const { conversationId, userMessage, history, missionId, extraLeads, disabledBaseLeads } = await req.json();
+    const disabledSet = new Set(
+      Array.isArray(disabledBaseLeads)
+        ? disabledBaseLeads.map((s: any) => String(s).toUpperCase())
+        : []
+    );
     if (!conversationId || !userMessage) {
       return new Response(JSON.stringify({ error: "Missing conversationId or userMessage" }), {
         status: 400,
@@ -138,22 +143,12 @@ serve(async (req) => {
       content: cmdResp,
     });
 
-    // Determine which leads to activate based on Commander's response
-    const cmdLower = cmdResp.toLowerCase();
-    const activeLeads = AGENT_CHAIN.slice(1).filter((lead) => {
-      if (lead.codename === "PHANTOM")
-        return cmdLower.includes("recon") || cmdLower.includes("scan") || cmdLower.includes("enum") || cmdLower.includes("discover") || cmdLower.includes("phantom") || cmdLower.includes("osint") || cmdLower.includes("subdomain");
-      if (lead.codename === "VIPER")
-        return cmdLower.includes("exploit") || cmdLower.includes("attack") || cmdLower.includes("vuln") || cmdLower.includes("inject") || cmdLower.includes("viper") || cmdLower.includes("fuzz") || cmdLower.includes("test");
-      if (lead.codename === "SPECTER")
-        return cmdLower.includes("stealth") || cmdLower.includes("evad") || cmdLower.includes("persist") || cmdLower.includes("lateral") || cmdLower.includes("specter") || cmdLower.includes("privesc") || cmdLower.includes("bypass");
-      return false;
-    });
-
-    // If no specific lead triggered, activate all leads
-    const baseLeadsToRun = activeLeads.length > 0 ? activeLeads : AGENT_CHAIN.slice(1);
+    // User-toggled base leads: any base lead NOT in disabledSet runs every turn
+    const enabledBaseLeads = AGENT_CHAIN.slice(1).filter(
+      (lead) => !disabledSet.has(lead.codename)
+    );
     // Always include user-deployed specialist leads from the sidebar
-    const leadsToRun = [...baseLeadsToRun, ...dynamicLeads];
+    const leadsToRun = [...enabledBaseLeads, ...dynamicLeads];
 
     // Run leads in parallel
     const leadPromises = leadsToRun.map(async (lead) => {

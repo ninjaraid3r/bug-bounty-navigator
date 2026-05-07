@@ -46,19 +46,27 @@ export default function ConversationFeed() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       let extraLeads: any[] = [];
+      let toggles: Record<string, boolean> = {};
+      try {
+        const t = localStorage.getItem("liq.leadToggles");
+        if (t) toggles = JSON.parse(t) || {};
+      } catch {}
+      const isOn = (n: string) => toggles[n] !== false; // default ON
       try {
         const raw = localStorage.getItem("liq.activeLeads");
         if (raw) {
           extraLeads = (JSON.parse(raw) || [])
-            .filter((l: any) => l && l.name && l.prompt)
+            .filter((l: any) => l && l.name && l.prompt && isOn(l.name))
             .map((l: any) => ({ codename: l.name, role: l.role, prompt: l.prompt }));
         }
       } catch {}
+      const disabledBaseLeads = ["PHANTOM", "VIPER", "SPECTER"].filter(n => !isOn(n));
       const body = JSON.stringify({
         conversationId: conversation?.id,
         userMessage: text,
         history: messages.slice(-20),
         extraLeads,
+        disabledBaseLeads,
       });
 
       // Retry on transient edge-runtime outages (503/504/502)

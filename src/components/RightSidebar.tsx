@@ -12,6 +12,7 @@ import {
   Plus,
   X,
   Check,
+  Power,
 } from "lucide-react";
 
 interface Agent {
@@ -107,16 +108,24 @@ interface RightSidebarProps {
 }
 
 const STORAGE_KEY = "liq.activeLeads";
+const TOGGLE_KEY = "liq.leadToggles";
+
+const BASE_LEAD_NAMES = baseAgents.filter(a => a.type === "lead").map(a => a.name);
 
 export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps) {
   const navigate = useNavigate();
   const [extraLeads, setExtraLeads] = useState<Agent[]>([]);
   const [showAddLead, setShowAddLead] = useState(false);
+  const [toggles, setToggles] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setExtraLeads(JSON.parse(raw));
+    } catch {}
+    try {
+      const raw = localStorage.getItem(TOGGLE_KEY);
+      if (raw) setToggles(JSON.parse(raw));
     } catch {}
   }, []);
 
@@ -125,6 +134,20 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {}
+  };
+
+  const persistToggles = (next: Record<string, boolean>) => {
+    setToggles(next);
+    try {
+      localStorage.setItem(TOGGLE_KEY, JSON.stringify(next));
+      window.dispatchEvent(new Event("liq:leads-changed"));
+    } catch {}
+  };
+
+  const isOn = (name: string) => toggles[name] !== false; // default ON
+
+  const toggleLead = (name: string) => {
+    persistToggles({ ...toggles, [name]: !isOn(name) });
   };
 
   const allLeads = [...baseAgents.filter(a => a.type === "lead"), ...extraLeads];
@@ -143,11 +166,14 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
       },
     ];
     persistLeads(next);
+    persistToggles({ ...toggles, [tpl.codename]: true });
   };
 
   const removeLead = (codename: string) => {
     persistLeads(extraLeads.filter(a => a.name !== codename));
   };
+
+  const onCount = allLeads.filter(l => isOn(l.name)).length;
 
   return (
     <motion.aside
@@ -224,6 +250,9 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
                     <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">
                       Leads
                     </span>
+                    <span className="text-[9px] font-mono text-muted-foreground">
+                      ({onCount}/{allLeads.length} on)
+                    </span>
                   </div>
                   <button
                     onClick={() => setShowAddLead(true)}
@@ -236,11 +265,14 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
                 <div className="space-y-1">
                   {allLeads.map(agent => {
                     const removable = !baseAgents.some(b => b.name === agent.name);
+                    const on = isOn(agent.name);
                     return (
                       <AgentCard
                         key={agent.name}
                         agent={agent}
+                        on={on}
                         onClick={() => navigate(`/agents/${agent.name.toLowerCase()}`)}
+                        onTogglePower={() => toggleLead(agent.name)}
                         onRemove={removable ? () => removeLead(agent.name) : undefined}
                       />
                     );
@@ -269,7 +301,7 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
                   Mission Stats
                 </span>
                 <div className="grid grid-cols-2 gap-2">
-                  <StatBox label="Leads" value={String(allLeads.length)} />
+                  <StatBox label="Leads On" value={`${onCount}`} />
                   <StatBox label="Raiders" value={String(raiders.length)} />
                   <StatBox label="Vulns" value="3" />
                   <StatBox label="Uptime" value="2h" />
@@ -376,22 +408,44 @@ function AgentCard({
   agent,
   onClick,
   onRemove,
+  onTogglePower,
+  on,
 }: {
   agent: Agent;
   onClick?: () => void;
   onRemove?: () => void;
+  onTogglePower?: () => void;
+  on?: boolean;
 }) {
+  const dimmed = onTogglePower && on === false;
   return (
     <div
-      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-2/50 border border-border hover:border-primary/40 hover:bg-surface-2 transition-colors group"
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md border transition-colors group ${
+        dimmed
+          ? "bg-surface-2/20 border-border/50 opacity-50"
+          : "bg-surface-2/50 border-border hover:border-primary/40 hover:bg-surface-2"
+      }`}
     >
-      <div className={`w-1.5 h-1.5 rounded-full ${statusColor[agent.status]}`} />
+      <div className={`w-1.5 h-1.5 rounded-full ${dimmed ? "bg-muted-foreground" : statusColor[agent.status]}`} />
       <button onClick={onClick} className="flex-1 min-w-0 text-left cursor-pointer">
-        <div className="text-[11px] font-mono font-semibold text-foreground truncate group-hover:text-primary">
+        <div className={`text-[11px] font-mono font-semibold truncate group-hover:text-primary ${dimmed ? "text-muted-foreground" : "text-foreground"}`}>
           {agent.name}
         </div>
         <div className="text-[9px] font-mono text-muted-foreground truncate">{agent.role}</div>
       </button>
+      {onTogglePower && (
+        <button
+          onClick={onTogglePower}
+          className={`p-0.5 rounded transition-colors ${
+            on
+              ? "text-primary hover:bg-primary/10"
+              : "text-muted-foreground hover:text-primary hover:bg-surface-1"
+          }`}
+          title={on ? "Turn OFF (exclude from session)" : "Turn ON (include in session)"}
+        >
+          <Power className="w-3 h-3" />
+        </button>
+      )}
       {onRemove && (
         <button
           onClick={onRemove}
