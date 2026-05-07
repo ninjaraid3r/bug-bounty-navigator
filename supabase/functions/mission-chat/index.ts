@@ -61,7 +61,12 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, userMessage, history, missionId, extraLeads } = await req.json();
+    const { conversationId, userMessage, history, missionId, extraLeads, disabledBaseLeads } = await req.json();
+    const disabledSet = new Set(
+      Array.isArray(disabledBaseLeads)
+        ? disabledBaseLeads.map((s: any) => String(s).toUpperCase())
+        : []
+    );
     if (!conversationId || !userMessage) {
       return new Response(JSON.stringify({ error: "Missing conversationId or userMessage" }), {
         status: 400,
