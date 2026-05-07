@@ -151,7 +151,9 @@ serve(async (req) => {
     });
 
     // If no specific lead triggered, activate all leads
-    const leadsToRun = activeLeads.length > 0 ? activeLeads : AGENT_CHAIN.slice(1);
+    const baseLeadsToRun = activeLeads.length > 0 ? activeLeads : AGENT_CHAIN.slice(1);
+    // Always include user-deployed specialist leads from the sidebar
+    const leadsToRun = [...baseLeadsToRun, ...dynamicLeads];
 
     // Run leads in parallel
     const leadPromises = leadsToRun.map(async (lead) => {
