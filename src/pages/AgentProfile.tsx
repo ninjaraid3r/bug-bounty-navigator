@@ -511,15 +511,31 @@ function Section({ icon: Icon, label, tone, children }: { icon: any; label: stri
   );
 }
 
-function LearnList({ label, tone, items }: { label: string; tone: "primary" | "foreground" | "muted"; items?: string[] }) {
+function LearnList({ label, tone, items, onRemove }: { label: string; tone: "primary" | "foreground" | "muted"; items?: string[]; onRemove?: (i: number) => void }) {
   const color = tone === "primary" ? "text-primary" : tone === "foreground" ? "text-foreground" : "text-muted-foreground";
   return (
     <div className="border border-border rounded-md p-2 bg-background/40">
       <div className={`text-[10px] font-mono font-bold uppercase tracking-widest ${color} mb-1`}>{label} Learnings</div>
       {Array.isArray(items) && items.length > 0
-        ? <ul className="text-[11px] text-muted-foreground space-y-0.5 list-disc pl-4">{items.map((x, i) => <li key={i}>{x}</li>)}</ul>
+        ? <ul className="text-[11px] text-muted-foreground space-y-0.5">
+            {items.map((x, i) => (
+              <li key={i} className="flex items-start gap-1 group/li">
+                <span className="text-primary">•</span>
+                <span className="flex-1">{x}</span>
+                {onRemove && <button onClick={() => onRemove(i)} className="opacity-0 group-hover/li:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"><X className="w-3 h-3" /></button>}
+              </li>
+            ))}
+          </ul>
         : <p className="text-[10px] text-muted-foreground italic">None.</p>}
     </div>
+  );
+}
+
+function ClearChip({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-surface-2/40 hover:border-destructive hover:text-destructive text-[10px] font-mono text-muted-foreground transition-colors">
+      <Eraser className="w-2.5 h-2.5" /> {children}
+    </button>
   );
 }
 
