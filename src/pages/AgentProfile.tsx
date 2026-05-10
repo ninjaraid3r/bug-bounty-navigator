@@ -313,6 +313,17 @@ export default function AgentProfile() {
 
           {/* MEMORY — every session this agent participated in */}
           <TabsContent value="memory" className="mt-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {meta.type !== "raider" && (
+                <Button size="sm" variant="default" onClick={reviewLatestSession} disabled={!sessions.length || !!reviewingId}>
+                  {reviewingId ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Reviewing latest…</> : <><BookOpen className="w-3 h-3 mr-1" /> Review Latest Session</>}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => navigate("/commander/sessions")}>
+                <Database className="w-3 h-3 mr-1" /> All Past Sessions
+              </Button>
+              <span className="text-[10px] font-mono text-muted-foreground">{sessions.length} session{sessions.length === 1 ? "" : "s"} on record</span>
+            </div>
             {sessions.length === 0 ? (
               <Card><CardContent className="p-6 text-xs font-mono text-muted-foreground">No sessions logged yet.</CardContent></Card>
             ) : sessions.map(s => {
