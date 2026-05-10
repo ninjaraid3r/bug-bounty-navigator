@@ -150,6 +150,9 @@ export default function AgentProfile() {
   }
 
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [phaseRunningId, setPhaseRunningId] = useState<string | null>(null);
+  const [handoffKey, setHandoffKey] = useState<string | null>(null);
+
   async function leadReviewSession(sessionId: string) {
     setReviewingId(sessionId);
     try {
@@ -164,6 +167,42 @@ export default function AgentProfile() {
       toast.error(e?.message || "Review failed");
     } finally {
       setReviewingId(null);
+    }
+  }
+
+  async function reviewLatestSession() {
+    const latest = sessions[0];
+    if (!latest) return toast.error("No sessions yet — run a mission first.");
+    await leadReviewSession(latest.id);
+  }
+
+  async function commanderPhasedReview(sessionId: string) {
+    setPhaseRunningId(sessionId);
+    try {
+      const { error } = await supabase.functions.invoke("commander-review", { body: { sessionId } });
+      if (error) throw error;
+      toast.success("Phased review complete");
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Phased review failed");
+    } finally {
+      setPhaseRunningId(null);
+    }
+  }
+
+  async function passToLead(sessionId: string, targetLead: string, item: any, key: string) {
+    setHandoffKey(key);
+    try {
+      const { data, error } = await supabase.functions.invoke("pass-to-lead", {
+        body: { sessionId, targetLead, item },
+      });
+      if (error) throw error;
+      toast.success(`Handed off to ${targetLead}${data?.skill ? " · skill saved" : ""}`);
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Handoff failed");
+    } finally {
+      setHandoffKey(null);
     }
   }
 
