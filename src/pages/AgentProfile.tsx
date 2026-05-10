@@ -353,6 +353,11 @@ export default function AgentProfile() {
                               {reviewingId === s.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Reviewing…</> : <><BookOpen className="w-3 h-3 mr-1" /> Lead Review</>}
                             </Button>
                           )}
+                          {isCommander && (
+                            <Button size="sm" variant="outline" onClick={() => commanderPhasedReview(s.id)} disabled={phaseRunningId === s.id} className="h-7 text-[11px]" title="Run 4-phase strategic review">
+                              {phaseRunningId === s.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Phasing…</> : <><Layers className="w-3 h-3 mr-1" /> Phased Review</>}
+                            </Button>
+                          )}
                           <Button size="sm" variant="ghost" onClick={() => navigate(`/commander/sessions/${s.id}`)} className="h-7 text-[11px]"><FileText className="w-3 h-3 mr-1" /> Full</Button>
                           <Button size="sm" variant="ghost" onClick={() => deleteSession(s.id)} className="h-7 text-[11px] text-muted-foreground hover:text-destructive" title="Delete session memory"><Trash2 className="w-3 h-3" /></Button>
                         </div>
