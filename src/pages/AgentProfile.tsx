@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2, Loader2,
   Brain, Sparkles, AlertTriangle, Wrench, Search, Hammer, TrendingUp, FileText,
-  Eraser, X, BookOpen,
+  Eraser, X, BookOpen, Layers, Send, Database, ChevronRight,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
