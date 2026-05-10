@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2, Loader2,
   Brain, Sparkles, AlertTriangle, Wrench, Search, Hammer, TrendingUp, FileText,
-  Eraser, X, BookOpen,
+  Eraser, X, BookOpen, Layers, Send, Database, ChevronRight,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -150,6 +150,9 @@ export default function AgentProfile() {
   }
 
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [phaseRunningId, setPhaseRunningId] = useState<string | null>(null);
+  const [handoffKey, setHandoffKey] = useState<string | null>(null);
+
   async function leadReviewSession(sessionId: string) {
     setReviewingId(sessionId);
     try {
@@ -164,6 +167,42 @@ export default function AgentProfile() {
       toast.error(e?.message || "Review failed");
     } finally {
       setReviewingId(null);
+    }
+  }
+
+  async function reviewLatestSession() {
+    const latest = sessions[0];
+    if (!latest) return toast.error("No sessions yet — run a mission first.");
+    await leadReviewSession(latest.id);
+  }
+
+  async function commanderPhasedReview(sessionId: string) {
+    setPhaseRunningId(sessionId);
+    try {
+      const { error } = await supabase.functions.invoke("commander-review", { body: { sessionId } });
+      if (error) throw error;
+      toast.success("Phased review complete");
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Phased review failed");
+    } finally {
+      setPhaseRunningId(null);
+    }
+  }
+
+  async function passToLead(sessionId: string, targetLead: string, item: any, key: string) {
+    setHandoffKey(key);
+    try {
+      const { data, error } = await supabase.functions.invoke("pass-to-lead", {
+        body: { sessionId, targetLead, item },
+      });
+      if (error) throw error;
+      toast.success(`Handed off to ${targetLead}${data?.skill ? " · skill saved" : ""}`);
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Handoff failed");
+    } finally {
+      setHandoffKey(null);
     }
   }
 
@@ -274,6 +313,17 @@ export default function AgentProfile() {
 
           {/* MEMORY — every session this agent participated in */}
           <TabsContent value="memory" className="mt-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {meta.type !== "raider" && (
+                <Button size="sm" variant="default" onClick={reviewLatestSession} disabled={!sessions.length || !!reviewingId}>
+                  {reviewingId ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Reviewing latest…</> : <><BookOpen className="w-3 h-3 mr-1" /> Review Latest Session</>}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => navigate("/commander/sessions")}>
+                <Database className="w-3 h-3 mr-1" /> All Past Sessions
+              </Button>
+              <span className="text-[10px] font-mono text-muted-foreground">{sessions.length} session{sessions.length === 1 ? "" : "s"} on record</span>
+            </div>
             {sessions.length === 0 ? (
               <Card><CardContent className="p-6 text-xs font-mono text-muted-foreground">No sessions logged yet.</CardContent></Card>
             ) : sessions.map(s => {
@@ -301,6 +351,11 @@ export default function AgentProfile() {
                           {meta.type !== "raider" && (
                             <Button size="sm" variant="outline" onClick={() => leadReviewSession(s.id)} disabled={reviewingId === s.id} className="h-7 text-[11px]" title={`${meta.name} reviews this session and creates new automations`}>
                               {reviewingId === s.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Reviewing…</> : <><BookOpen className="w-3 h-3 mr-1" /> Lead Review</>}
+                            </Button>
+                          )}
+                          {isCommander && (
+                            <Button size="sm" variant="outline" onClick={() => commanderPhasedReview(s.id)} disabled={phaseRunningId === s.id} className="h-7 text-[11px]" title="Run 4-phase strategic review">
+                              {phaseRunningId === s.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Phasing…</> : <><Layers className="w-3 h-3 mr-1" /> Phased Review</>}
                             </Button>
                           )}
                           <Button size="sm" variant="ghost" onClick={() => navigate(`/commander/sessions/${s.id}`)} className="h-7 text-[11px]"><FileText className="w-3 h-3 mr-1" /> Full</Button>
@@ -367,6 +422,68 @@ export default function AgentProfile() {
                         {isCommander && Array.isArray(s.team_improvements) && s.team_improvements.length > 0 && (
                           <Section icon={TrendingUp} label="Team Improvements">
                             <ul className="text-[11px] text-muted-foreground space-y-0.5 list-disc pl-4">{s.team_improvements.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                          </Section>
+                        )}
+
+                        {isCommander && s.agent_insights?.COMMANDER_REVIEW && (
+                          <Section icon={Layers} label={`Phased Review · ${new Date(s.agent_insights.COMMANDER_REVIEW.reviewed_at).toLocaleString()}`}>
+                            {s.agent_insights.COMMANDER_REVIEW.executive_summary && (
+                              <p className="text-xs text-foreground mb-2">{s.agent_insights.COMMANDER_REVIEW.executive_summary}</p>
+                            )}
+                            <div className="space-y-2">
+                              {(s.agent_insights.COMMANDER_REVIEW.phases || []).map((p: any, pi: number) => (
+                                <div key={pi} className="border border-border rounded-md p-2 bg-background/40">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-mono uppercase tracking-widest text-primary">{p.title}</span>
+                                    <Badge variant="outline" className="text-[9px]">{p.default_lead}</Badge>
+                                  </div>
+                                  {p.focus && <div className="text-[10px] text-muted-foreground italic mb-1">{p.focus}</div>}
+                                  {Array.isArray(p.areas_of_interest) && p.areas_of_interest.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-1.5">
+                                      {p.areas_of_interest.map((a: string, ai: number) => (
+                                        <span key={ai} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-2/60 border border-border text-muted-foreground">{a}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <ul className="space-y-1.5">
+                                    {(p.items || []).map((it: any, ii: number) => {
+                                      const key = `${s.id}-${pi}-${ii}`;
+                                      return (
+                                        <li key={ii} className="border-l-2 border-primary/40 pl-2">
+                                          <div className="flex items-start gap-2">
+                                            <div className="flex-1 min-w-0">
+                                              <div className="text-[11px] text-foreground">{it.text}</div>
+                                              <div className="flex items-center gap-1.5 mt-0.5">
+                                                <Badge variant="outline" className="text-[9px]">{it.target_lead}</Badge>
+                                                {it.severity && <span className={`text-[9px] font-mono uppercase ${it.severity === "high" ? "text-destructive" : it.severity === "medium" ? "text-primary" : "text-muted-foreground"}`}>{it.severity}</span>}
+                                                {it.suggested_skill?.name && <span className="text-[9px] font-mono text-muted-foreground truncate">⚡ {it.suggested_skill.name}</span>}
+                                              </div>
+                                            </div>
+                                            <Button size="sm" variant="outline" className="h-6 text-[10px] shrink-0" disabled={handoffKey === key}
+                                              onClick={() => passToLead(s.id, it.target_lead, it, key)}>
+                                              {handoffKey === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Send className="w-3 h-3 mr-1" /> Pass to {it.target_lead}</>}
+                                            </Button>
+                                          </div>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          </Section>
+                        )}
+
+                        {!isCommander && Array.isArray(s.agent_insights?.[meta.name]?.handoffs) && s.agent_insights[meta.name].handoffs.length > 0 && (
+                          <Section icon={Send} label="Commander Handoffs to You">
+                            <ul className="text-[11px] text-foreground space-y-1">
+                              {s.agent_insights[meta.name].handoffs.map((h: any, i: number) => (
+                                <li key={i} className="border-l-2 border-primary pl-2">
+                                  {h.text}
+                                  <div className="text-[9px] font-mono text-muted-foreground">{new Date(h.at).toLocaleString()}</div>
+                                </li>
+                              ))}
+                            </ul>
                           </Section>
                         )}
                       </CardContent>
