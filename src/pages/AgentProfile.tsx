@@ -424,6 +424,68 @@ export default function AgentProfile() {
                             <ul className="text-[11px] text-muted-foreground space-y-0.5 list-disc pl-4">{s.team_improvements.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
                           </Section>
                         )}
+
+                        {isCommander && s.agent_insights?.COMMANDER_REVIEW && (
+                          <Section icon={Layers} label={`Phased Review · ${new Date(s.agent_insights.COMMANDER_REVIEW.reviewed_at).toLocaleString()}`}>
+                            {s.agent_insights.COMMANDER_REVIEW.executive_summary && (
+                              <p className="text-xs text-foreground mb-2">{s.agent_insights.COMMANDER_REVIEW.executive_summary}</p>
+                            )}
+                            <div className="space-y-2">
+                              {(s.agent_insights.COMMANDER_REVIEW.phases || []).map((p: any, pi: number) => (
+                                <div key={pi} className="border border-border rounded-md p-2 bg-background/40">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-mono uppercase tracking-widest text-primary">{p.title}</span>
+                                    <Badge variant="outline" className="text-[9px]">{p.default_lead}</Badge>
+                                  </div>
+                                  {p.focus && <div className="text-[10px] text-muted-foreground italic mb-1">{p.focus}</div>}
+                                  {Array.isArray(p.areas_of_interest) && p.areas_of_interest.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-1.5">
+                                      {p.areas_of_interest.map((a: string, ai: number) => (
+                                        <span key={ai} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-2/60 border border-border text-muted-foreground">{a}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <ul className="space-y-1.5">
+                                    {(p.items || []).map((it: any, ii: number) => {
+                                      const key = `${s.id}-${pi}-${ii}`;
+                                      return (
+                                        <li key={ii} className="border-l-2 border-primary/40 pl-2">
+                                          <div className="flex items-start gap-2">
+                                            <div className="flex-1 min-w-0">
+                                              <div className="text-[11px] text-foreground">{it.text}</div>
+                                              <div className="flex items-center gap-1.5 mt-0.5">
+                                                <Badge variant="outline" className="text-[9px]">{it.target_lead}</Badge>
+                                                {it.severity && <span className={`text-[9px] font-mono uppercase ${it.severity === "high" ? "text-destructive" : it.severity === "medium" ? "text-primary" : "text-muted-foreground"}`}>{it.severity}</span>}
+                                                {it.suggested_skill?.name && <span className="text-[9px] font-mono text-muted-foreground truncate">⚡ {it.suggested_skill.name}</span>}
+                                              </div>
+                                            </div>
+                                            <Button size="sm" variant="outline" className="h-6 text-[10px] shrink-0" disabled={handoffKey === key}
+                                              onClick={() => passToLead(s.id, it.target_lead, it, key)}>
+                                              {handoffKey === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Send className="w-3 h-3 mr-1" /> Pass to {it.target_lead}</>}
+                                            </Button>
+                                          </div>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          </Section>
+                        )}
+
+                        {!isCommander && Array.isArray(s.agent_insights?.[meta.name]?.handoffs) && s.agent_insights[meta.name].handoffs.length > 0 && (
+                          <Section icon={Send} label="Commander Handoffs to You">
+                            <ul className="text-[11px] text-foreground space-y-1">
+                              {s.agent_insights[meta.name].handoffs.map((h: any, i: number) => (
+                                <li key={i} className="border-l-2 border-primary pl-2">
+                                  {h.text}
+                                  <div className="text-[9px] font-mono text-muted-foreground">{new Date(h.at).toLocaleString()}</div>
+                                </li>
+                              ))}
+                            </ul>
+                          </Section>
+                        )}
                       </CardContent>
                     </CollapsibleContent>
                   </Card>
