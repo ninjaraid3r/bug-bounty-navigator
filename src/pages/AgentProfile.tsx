@@ -59,6 +59,12 @@ const AGENT_METRICS: Record<string, { label: string; key: "found" | "fixed" | "c
     { label: "Payloads Created", key: "created" },
     { label: "A-Grade Runs",     key: "agrade" },
   ],
+  CARTOGRAPHER: [
+    { label: "Mapping Tasks",    key: "tasks" },
+    { label: "Assets Mapped",    key: "found" },
+    { label: "Signals",          key: "signals" },
+    { label: "A-Grade Runs",     key: "agrade" },
+  ],
 };
 
 export default function AgentProfile() {
