@@ -23,7 +23,7 @@ serve(async (req) => {
     if (!sessionId || !lead || !item?.text) {
       return new Response(JSON.stringify({ error: "sessionId, targetLead, and item.text required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    if (!["PHANTOM", "VIPER", "SPECTER", "COMMANDER"].includes(lead)) {
+    if (!["PHANTOM", "VIPER", "SPECTER", "CARTOGRAPHER", "COMMANDER"].includes(lead)) {
       return new Response(JSON.stringify({ error: "Invalid targetLead" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -51,7 +51,7 @@ serve(async (req) => {
         prompt_template: String(skill.prompt_template).slice(0, 4000),
         category: skill.category || "commander-handoff",
         source: "ai",
-        status: "approved",
+        status: "pending",
         metadata: { from_session: sessionId, handoff_text: item.text },
       }).select().single();
       savedSkill = ins;

@@ -28,6 +28,7 @@ const baseAgents: Agent[] = [
   { name: "PHANTOM", role: "Recon Lead", status: "working", type: "lead" },
   { name: "VIPER", role: "Exploit Lead", status: "active", type: "lead" },
   { name: "SPECTER", role: "Stealth Lead", status: "idle", type: "lead" },
+  { name: "CARTOGRAPHER", role: "Recon Mapping Lead", status: "active", type: "lead" },
 ];
 
 const raiders: Agent[] = [
