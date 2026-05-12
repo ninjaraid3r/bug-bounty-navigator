@@ -338,6 +338,7 @@ export default function AgentProfile() {
 
           {/* MEMORY — every session this agent participated in */}
           <TabsContent value="memory" className="mt-4 space-y-3">
+            {meta.name === "CARTOGRAPHER" && <ReconMapsPanel />}
             <div className="flex flex-wrap items-center gap-2">
               {meta.type !== "raider" && (
                 <Button size="sm" variant="default" onClick={reviewLatestSession} disabled={!sessions.length || !!reviewingId}>
@@ -346,6 +347,9 @@ export default function AgentProfile() {
               )}
               <Button size="sm" variant="outline" onClick={() => navigate("/commander/sessions")}>
                 <Database className="w-3 h-3 mr-1" /> All Past Sessions
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/skills/pending")}>
+                <ShieldCheck className="w-3 h-3 mr-1" /> Skill Approval Queue
               </Button>
               <span className="text-[10px] font-mono text-muted-foreground">{sessions.length} session{sessions.length === 1 ? "" : "s"} on record</span>
             </div>
