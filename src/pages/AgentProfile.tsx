@@ -752,3 +752,52 @@ function AccomplishCard({ icon: Icon, title, items }: { icon: any; title: string
     </Card>
   );
 }
+
+function PendingSkillCard({ automation, onApprove, onReject }: {
+  automation: any;
+  onApprove: (edits?: { name?: string; prompt_template?: string; description?: string }) => void;
+  onReject: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(automation.name || "");
+  const [desc, setDesc] = useState(automation.description || "");
+  const [tpl, setTpl] = useState(automation.prompt_template || "");
+  return (
+    <div className="border border-primary/40 rounded-md p-3 bg-primary/5">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="min-w-0 flex-1">
+          {editing ? (
+            <Input className="h-7 text-xs font-mono mb-1" value={name} onChange={(e) => setName(e.target.value)} />
+          ) : (
+            <div className="font-mono text-sm font-semibold text-foreground truncate">{automation.name}</div>
+          )}
+          <div className="text-[10px] font-mono text-muted-foreground">{automation.category} · proposed by {automation.source}</div>
+        </div>
+        <Badge className="text-[9px] bg-primary/20 text-primary border-primary/40">PENDING</Badge>
+      </div>
+      {editing ? (
+        <>
+          <Input className="h-7 text-xs font-mono mb-2" placeholder="Description" value={desc} onChange={(e) => setDesc(e.target.value)} />
+          <Textarea rows={5} className="text-[10px] font-mono mb-2" value={tpl} onChange={(e) => setTpl(e.target.value)} />
+        </>
+      ) : (
+        <>
+          {automation.description && <p className="text-xs text-muted-foreground mb-1.5">{automation.description}</p>}
+          <pre className="text-[10px] font-mono text-muted-foreground bg-background/60 p-2 rounded border border-border line-clamp-4 whitespace-pre-wrap">{automation.prompt_template}</pre>
+        </>
+      )}
+      <div className="flex gap-1 mt-2">
+        <Button size="sm" variant="default" className="h-7 text-[11px] flex-1"
+          onClick={() => onApprove(editing ? { name, prompt_template: tpl, description: desc } : undefined)}>
+          <Check className="w-3 h-3 mr-1" /> {editing ? "Save & Approve" : "Approve"}
+        </Button>
+        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setEditing(v => !v)}>
+          {editing ? "Cancel" : "Edit"}
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 text-[11px] text-muted-foreground hover:text-destructive" onClick={onReject}>
+          <X className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
