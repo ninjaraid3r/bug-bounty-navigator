@@ -115,7 +115,7 @@ Produce 2-4 high-value reusable automations for ${codename}.`;
       prompt_template: String(a.prompt_template || "").slice(0, 4000),
       category: a.category || "lead-review",
       source: "ai",
-      status: "approved",
+      status: "pending",
       metadata: { from_session: sessionId, review: review.review },
     }));
 

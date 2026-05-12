@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2, Loader2,
   Brain, Sparkles, AlertTriangle, Wrench, Search, Hammer, TrendingUp, FileText,
-  Eraser, X, BookOpen, Layers, Send, Database, ChevronRight,
+  Eraser, X, BookOpen, Layers, Send, Database, ChevronRight, Map as MapIcon, Check, ShieldCheck,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import ReconMapsPanel from "@/components/ReconMapsPanel";
 
 const AGENT_META: Record<string, { name: string; type: "manager" | "lead" | "raider"; tagline: string; specialty: string }> = {
   commander: { name: "COMMANDER", type: "manager", tagline: "Strategic mission manager", specialty: "Orchestration · Grading · Memory" },
   phantom:   { name: "PHANTOM",   type: "lead",    tagline: "Recon Lead — OSINT, DNS, scanning", specialty: "Discovery · Surface mapping" },
   viper:     { name: "VIPER",     type: "lead",    tagline: "Exploit Lead — vulns, payloads, attacks", specialty: "Exploitation · PoC crafting" },
   specter:   { name: "SPECTER",   type: "lead",    tagline: "Stealth Lead — evasion, persistence", specialty: "Evasion · OPSEC · Persistence" },
+  cartographer: { name: "CARTOGRAPHER", type: "lead", tagline: "Recon Mapping Lead — attack surface", specialty: "Subdomains · Endpoints · Mind-mapping" },
   "r-001":   { name: "R-001",     type: "raider",  tagline: "Port Scanner Raider", specialty: "Port enumeration" },
   "r-002":   { name: "R-002",     type: "raider",  tagline: "Subdomain Enum Raider", specialty: "Subdomain discovery" },
   "r-003":   { name: "R-003",     type: "raider",  tagline: "Fuzzer Raider", specialty: "Path / param fuzzing" },
@@ -55,6 +57,12 @@ const AGENT_METRICS: Record<string, { label: string; key: "found" | "fixed" | "c
     { label: "Evasion Tasks",    key: "tasks" },
     { label: "Detections Fixed", key: "fixed" },
     { label: "Payloads Created", key: "created" },
+    { label: "A-Grade Runs",     key: "agrade" },
+  ],
+  CARTOGRAPHER: [
+    { label: "Mapping Tasks",    key: "tasks" },
+    { label: "Assets Mapped",    key: "found" },
+    { label: "Signals",          key: "signals" },
     { label: "A-Grade Runs",     key: "agrade" },
   ],
 };
@@ -252,6 +260,23 @@ export default function AgentProfile() {
 
   async function deleteAutomation(id: string) { await supabase.from("automations").delete().eq("id", id); load(); }
 
+  async function approveAutomation(a: any, edits?: { name?: string; prompt_template?: string; description?: string }) {
+    const patch: any = { status: "approved" };
+    if (edits?.name) patch.name = edits.name;
+    if (edits?.prompt_template) patch.prompt_template = edits.prompt_template;
+    if (edits?.description !== undefined) patch.description = edits.description;
+    const { error } = await supabase.from("automations").update(patch).eq("id", a.id);
+    if (error) return toast.error(error.message);
+    toast.success("Skill approved");
+    load();
+  }
+  async function rejectAutomation(id: string) {
+    if (!confirm("Reject this proposed skill? It will be deleted.")) return;
+    await supabase.from("automations").delete().eq("id", id);
+    toast.success("Rejected");
+    load();
+  }
+
   async function runSkill(automation: any) {
     if (!user) return;
     setRunningId(automation.id);
@@ -313,6 +338,7 @@ export default function AgentProfile() {
 
           {/* MEMORY — every session this agent participated in */}
           <TabsContent value="memory" className="mt-4 space-y-3">
+            {meta.name === "CARTOGRAPHER" && <ReconMapsPanel />}
             <div className="flex flex-wrap items-center gap-2">
               {meta.type !== "raider" && (
                 <Button size="sm" variant="default" onClick={reviewLatestSession} disabled={!sessions.length || !!reviewingId}>
@@ -321,6 +347,9 @@ export default function AgentProfile() {
               )}
               <Button size="sm" variant="outline" onClick={() => navigate("/commander/sessions")}>
                 <Database className="w-3 h-3 mr-1" /> All Past Sessions
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/skills/pending")}>
+                <ShieldCheck className="w-3 h-3 mr-1" /> Skill Approval Queue
               </Button>
               <span className="text-[10px] font-mono text-muted-foreground">{sessions.length} session{sessions.length === 1 ? "" : "s"} on record</span>
             </div>
@@ -544,32 +573,67 @@ export default function AgentProfile() {
                     </DialogContent>
                   </Dialog>
                 </CardHeader>
-                <CardContent>
-                  {automations.length === 0 ? (
-                    <p className="text-xs text-muted-foreground font-mono">No skills saved yet.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {automations.map(a => (
-                        <div key={a.id} className="border border-border rounded-md p-3 bg-surface-2/40 hover:border-primary/40 transition-colors">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="font-mono text-sm font-semibold text-foreground truncate">{a.name}</div>
-                              <div className="text-[10px] font-mono text-muted-foreground">{a.category} · used {a.use_count}×</div>
+                <CardContent className="space-y-4">
+                  {/* Pending approval queue */}
+                  {(() => {
+                    const pending = automations.filter(a => a.status === "pending");
+                    const approved = automations.filter(a => a.status !== "pending");
+                    return (
+                      <>
+                        {pending.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                              <span className="text-[10px] font-mono uppercase tracking-widest text-primary">
+                                Pending Approval ({pending.length})
+                              </span>
                             </div>
-                            <div className="flex gap-1 shrink-0">
-                              <Badge variant={a.source === "ai" ? "default" : "outline"} className="text-[9px]">{a.source}</Badge>
-                              <button onClick={() => deleteAutomation(a.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {pending.map(a => (
+                                <PendingSkillCard
+                                  key={a.id}
+                                  automation={a}
+                                  onApprove={(edits) => approveAutomation(a, edits)}
+                                  onReject={() => rejectAutomation(a.id)}
+                                />
+                              ))}
                             </div>
                           </div>
-                          {a.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.description}</p>}
-                          <pre className="mt-2 text-[10px] font-mono text-muted-foreground bg-background/50 p-2 rounded border border-border line-clamp-3 whitespace-pre-wrap">{a.prompt_template}</pre>
-                          <Button size="sm" variant="outline" className="w-full mt-2 h-7 text-[11px] font-mono" disabled={runningId === a.id} onClick={() => runSkill(a)}>
-                            {runningId === a.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Dispatching…</> : <><Play className="w-3 h-3 mr-1" /> Run Skill</>}
-                          </Button>
+                        )}
+
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                            Approved Skills ({approved.length})
+                          </span>
+                          {approved.length === 0 ? (
+                            <p className="text-xs text-muted-foreground font-mono">No skills saved yet.</p>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {approved.map(a => (
+                                <div key={a.id} className="border border-border rounded-md p-3 bg-surface-2/40 hover:border-primary/40 transition-colors">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <div className="font-mono text-sm font-semibold text-foreground truncate">{a.name}</div>
+                                      <div className="text-[10px] font-mono text-muted-foreground">{a.category} · used {a.use_count}×</div>
+                                    </div>
+                                    <div className="flex gap-1 shrink-0">
+                                      <Badge variant={a.source === "ai" ? "default" : "outline"} className="text-[9px]">{a.source}</Badge>
+                                      <button onClick={() => deleteAutomation(a.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                                    </div>
+                                  </div>
+                                  {a.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.description}</p>}
+                                  <pre className="mt-2 text-[10px] font-mono text-muted-foreground bg-background/50 p-2 rounded border border-border line-clamp-3 whitespace-pre-wrap">{a.prompt_template}</pre>
+                                  <Button size="sm" variant="outline" className="w-full mt-2 h-7 text-[11px] font-mono" disabled={runningId === a.id} onClick={() => runSkill(a)}>
+                                    {runningId === a.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Dispatching…</> : <><Play className="w-3 h-3 mr-1" /> Run Skill</>}
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -686,5 +750,54 @@ function AccomplishCard({ icon: Icon, title, items }: { icon: any; title: string
             </div>}
       </CardContent>
     </Card>
+  );
+}
+
+function PendingSkillCard({ automation, onApprove, onReject }: {
+  automation: any;
+  onApprove: (edits?: { name?: string; prompt_template?: string; description?: string }) => void;
+  onReject: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(automation.name || "");
+  const [desc, setDesc] = useState(automation.description || "");
+  const [tpl, setTpl] = useState(automation.prompt_template || "");
+  return (
+    <div className="border border-primary/40 rounded-md p-3 bg-primary/5">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="min-w-0 flex-1">
+          {editing ? (
+            <Input className="h-7 text-xs font-mono mb-1" value={name} onChange={(e) => setName(e.target.value)} />
+          ) : (
+            <div className="font-mono text-sm font-semibold text-foreground truncate">{automation.name}</div>
+          )}
+          <div className="text-[10px] font-mono text-muted-foreground">{automation.category} · proposed by {automation.source}</div>
+        </div>
+        <Badge className="text-[9px] bg-primary/20 text-primary border-primary/40">PENDING</Badge>
+      </div>
+      {editing ? (
+        <>
+          <Input className="h-7 text-xs font-mono mb-2" placeholder="Description" value={desc} onChange={(e) => setDesc(e.target.value)} />
+          <Textarea rows={5} className="text-[10px] font-mono mb-2" value={tpl} onChange={(e) => setTpl(e.target.value)} />
+        </>
+      ) : (
+        <>
+          {automation.description && <p className="text-xs text-muted-foreground mb-1.5">{automation.description}</p>}
+          <pre className="text-[10px] font-mono text-muted-foreground bg-background/60 p-2 rounded border border-border line-clamp-4 whitespace-pre-wrap">{automation.prompt_template}</pre>
+        </>
+      )}
+      <div className="flex gap-1 mt-2">
+        <Button size="sm" variant="default" className="h-7 text-[11px] flex-1"
+          onClick={() => onApprove(editing ? { name, prompt_template: tpl, description: desc } : undefined)}>
+          <Check className="w-3 h-3 mr-1" /> {editing ? "Save & Approve" : "Approve"}
+        </Button>
+        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setEditing(v => !v)}>
+          {editing ? "Cancel" : "Edit"}
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 text-[11px] text-muted-foreground hover:text-destructive" onClick={onReject}>
+          <X className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
   );
 }

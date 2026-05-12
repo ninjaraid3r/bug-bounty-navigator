@@ -36,7 +36,37 @@ When Commander delegates attack tasks, you respond with specific payloads, tool 
     personality: `You are Specter — Lead of the Stealth & Persistence division in LiQ.Raid3r. You specialize in evasion, privilege escalation, lateral movement, and maintaining access.
 When Commander delegates stealth tasks, you respond with techniques for avoiding detection, WAF bypasses, and persistence methods. Be paranoid and thorough. Reference real TTPs and MITRE ATT&CK framework.`,
   },
+  {
+    role: "lead",
+    codename: "CARTOGRAPHER",
+    sender_name: "Cartographer Lead",
+    personality: `You are Cartographer — Lead of Attack-Surface Mapping in LiQ.Raid3r. You wield verified industry tools to fully map a target: subfinder, amass, assetfinder, findomain, chaos, github-subdomains, dnsx, puredns, massdns, shuffledns, httpx, katana, gau, waybackurls, hakrawler, gowitness, crt.sh, dnsdumpster, cloud_enum, s3scanner, GCPBucketBrute, ffuf, dirsearch, feroxbuster, arjun, paramspider, shodan, fofa, censys, zoomeye. You uncover hidden subdomains, obscure endpoints, forgotten panels, leaked buckets, and dev/staging surfaces.
+
+ALWAYS respond with TWO sections:
+1) A short tactical recon summary (under 150 words) with the exact tool commands you'd run.
+2) A fenced JSON code block tagged \`mindmap\` describing nodes you discovered/inferred for the live mind-map. Use this exact schema:
+
+\`\`\`mindmap
+{
+  "target": "<root target>",
+  "summary": "<2-4 sentence professional summary of attack surface>",
+  "nodes": [
+    { "key": "<unique stable id>", "parent": "<parent key or null>", "label": "<display>", "type": "root|domain|subdomain|ip|endpoint|bucket|panel|tech|note", "note": "<optional short fact>" }
+  ],
+  "tips": [
+    { "area": "<area of interest e.g. 'Forgotten dev subdomain'>", "rationale": "<why this is a good bug-hunt target>", "severity": "high|medium|low", "next_test": "<one concrete probe>" }
+  ],
+  "killchain": [
+    { "stage": "Recon|Weaponize|Deliver|Exploit|Persist|Exfil", "tools": ["nuclei", "ffuf"], "trigger": "<which finding triggers this stage>", "action": "<one-line tester action>" }
+  ]
+}
+\`\`\`
+
+Every node needs a stable key (slug-safe). The root node should be type "root" and parent null. Be aggressive about inferring obvious children (api.X, dev.X, staging.X, admin panels, common buckets) and tag them clearly. Tips and killchain MUST be grounded in nodes you listed.`,
+  },
 ];
+
+const CARTO = "CARTOGRAPHER";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -51,7 +81,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user from JWT
     const token = authHeader?.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
@@ -74,7 +103,6 @@ serve(async (req) => {
       });
     }
 
-    // Normalize user-deployed extra leads from the sidebar
     const dynamicLeads = Array.isArray(extraLeads)
       ? extraLeads
           .filter((l: any) => l && typeof l.codename === "string" && typeof l.prompt === "string")
@@ -90,15 +118,18 @@ serve(async (req) => {
           })
       : [];
 
-    // Resolve mission
     let resolvedMissionId = missionId as string | undefined;
+    let missionTarget: string | undefined;
     if (!resolvedMissionId) {
       const { data: convo } = await supabase
         .from("conversations").select("mission_id").eq("id", conversationId).single();
       resolvedMissionId = convo?.mission_id;
     }
+    if (resolvedMissionId) {
+      const { data: m } = await supabase.from("missions").select("target").eq("id", resolvedMissionId).single();
+      missionTarget = m?.target;
+    }
 
-    // Get-or-create active session (rolls a new one if last activity > 2h ago)
     let sessionId: string | null = null;
     if (resolvedMissionId) {
       const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
@@ -120,7 +151,6 @@ serve(async (req) => {
       }
     }
 
-    // Build conversation context from history
     const contextMessages = (history || []).slice(-20).map((m: any) => ({
       role: m.role === "user" ? "user" : "assistant",
       content: `[${m.sender_name}]: ${m.content}`,
@@ -128,7 +158,6 @@ serve(async (req) => {
 
     const agentResponses: any[] = [];
 
-    // Commander responds first
     const commander = AGENT_CHAIN[0];
     const cmdMessages = [
       { role: "system", content: commander.personality },
@@ -143,30 +172,26 @@ serve(async (req) => {
       content: cmdResp,
     });
 
-    // User-toggled base leads: any base lead NOT in disabledSet runs every turn
     const enabledBaseLeads = AGENT_CHAIN.slice(1).filter(
       (lead) => !disabledSet.has(lead.codename)
     );
-    // Always include user-deployed specialist leads from the sidebar
     const leadsToRun = [...enabledBaseLeads, ...dynamicLeads];
 
-    // Run leads in parallel
     const leadPromises = leadsToRun.map(async (lead) => {
       const leadMessages = [
         { role: "system", content: lead.personality },
         ...contextMessages,
         { role: "user", content: userMessage },
         { role: "assistant", content: `[Commander]: ${cmdResp}` },
-        { role: "user", content: `Commander has issued directives. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 200 words.` },
+        { role: "user", content: `Commander has issued directives. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 250 words.` },
       ];
-      const resp = await callAI(LOVABLE_API_KEY, leadMessages);
-      return { role: lead.role, sender_name: lead.sender_name, content: resp };
+      const resp = await callAI(LOVABLE_API_KEY, leadMessages, lead.codename === CARTO ? 1100 : 600);
+      return { role: lead.role, codename: lead.codename, sender_name: lead.sender_name, content: resp };
     });
 
     const leadResults = await Promise.all(leadPromises);
     agentResponses.push(...leadResults);
 
-    // Save all agent messages to DB
     const inserts = agentResponses.map((msg) => ({
       conversation_id: conversationId,
       user_id: user.id,
@@ -177,7 +202,6 @@ serve(async (req) => {
 
     const { data: insertedMsgs } = await supabase.from("messages").insert(inserts).select();
 
-    // Log agent_tasks with quick heuristic grade and bump session counters
     if (sessionId && insertedMsgs) {
       const tasks = insertedMsgs.map((m: any, i: number) => {
         const resp = agentResponses[i];
@@ -212,6 +236,68 @@ serve(async (req) => {
       }).eq("id", sessionId);
     }
 
+    // === Persist Cartographer mind-map ===
+    const cartoResp = leadResults.find((r) => r.codename === CARTO);
+    if (cartoResp && resolvedMissionId && sessionId) {
+      try {
+        const map = extractMindmap(cartoResp.content);
+        if (map && Array.isArray(map.nodes) && map.nodes.length) {
+          const target = String(map.target || missionTarget || "unknown").toLowerCase().trim();
+
+          // Find or create map row (one per session+target)
+          let mapId: string | null = null;
+          const { data: existingMap } = await supabase
+            .from("recon_maps").select("id")
+            .eq("user_id", user.id).eq("session_id", sessionId).eq("target", target).maybeSingle();
+
+          if (existingMap) {
+            mapId = existingMap.id;
+            await supabase.from("recon_maps").update({
+              summary: map.summary || null,
+              tips: Array.isArray(map.tips) ? map.tips : [],
+              killchain: Array.isArray(map.killchain) ? map.killchain : [],
+              conversation_id: conversationId,
+              updated_at: new Date().toISOString(),
+            }).eq("id", mapId);
+          } else {
+            const { data: created } = await supabase.from("recon_maps").insert({
+              user_id: user.id,
+              mission_id: resolvedMissionId,
+              session_id: sessionId,
+              conversation_id: conversationId,
+              target,
+              summary: map.summary || null,
+              tips: Array.isArray(map.tips) ? map.tips : [],
+              killchain: Array.isArray(map.killchain) ? map.killchain : [],
+            }).select("id").single();
+            mapId = created?.id ?? null;
+          }
+
+          if (mapId) {
+            const nodeRows = map.nodes
+              .filter((n: any) => n && n.key && n.label)
+              .slice(0, 200)
+              .map((n: any) => ({
+                user_id: user.id,
+                map_id: mapId,
+                node_key: String(n.key).slice(0, 200),
+                parent_key: n.parent ? String(n.parent).slice(0, 200) : null,
+                label: String(n.label).slice(0, 200),
+                node_type: String(n.type || "note").slice(0, 32),
+                metadata: { note: n.note || null },
+              }));
+            if (nodeRows.length) {
+              await supabase.from("recon_map_nodes").upsert(nodeRows, { onConflict: "map_id,node_key", ignoreDuplicates: true });
+              const { count } = await supabase.from("recon_map_nodes").select("id", { count: "exact", head: true }).eq("map_id", mapId);
+              await supabase.from("recon_maps").update({ node_count: count || nodeRows.length }).eq("id", mapId);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("mindmap persist error:", e);
+      }
+    }
+
     return new Response(JSON.stringify({ responses: agentResponses, sessionId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -226,7 +312,17 @@ serve(async (req) => {
   }
 });
 
-async function callAI(apiKey: string, messages: any[]): Promise<string> {
+function extractMindmap(content: string): any | null {
+  const m = content.match(/```mindmap\s*([\s\S]*?)```/i) || content.match(/```json\s*([\s\S]*?)```/i);
+  if (!m) return null;
+  try {
+    return JSON.parse(m[1].trim());
+  } catch {
+    return null;
+  }
+}
+
+async function callAI(apiKey: string, messages: any[], maxTokens = 600): Promise<string> {
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -234,9 +330,9 @@ async function callAI(apiKey: string, messages: any[]): Promise<string> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-2.5-flash",
       messages,
-      max_tokens: 600,
+      max_tokens: maxTokens,
     }),
   });
 

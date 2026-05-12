@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft, ChevronRight, Radar, Globe, Shield, Bug, Terminal,
-  Network, Crosshair, FileSearch, Settings, Zap, BookOpen, DollarSign,
+  Network, Crosshair, FileSearch, Settings, Zap, BookOpen, DollarSign, ShieldCheck,
 } from "lucide-react";
 
 const navItems = [
@@ -17,6 +17,7 @@ const navItems = [
   { icon: Crosshair, label: "Targets", path: "/targets" },
   { icon: FileSearch, label: "Reports", path: "/reports" },
   { icon: Zap, label: "Automation", path: "/automation" },
+  { icon: ShieldCheck, label: "Skill Queue", path: "/skills/pending" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 

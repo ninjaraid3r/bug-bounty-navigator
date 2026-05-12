@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import AgentProfile from "./pages/AgentProfile";
 import CommanderSessions from "./pages/CommanderSessions";
 import SessionDetail from "./pages/SessionDetail";
+import SkillApprovalQueue from "./pages/SkillApprovalQueue";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const AppRoutes = () => (
       <Route path="/agents/:codename" element={<AgentProfile />} />
       <Route path="/commander/sessions" element={<CommanderSessions />} />
       <Route path="/commander/sessions/:id" element={<SessionDetail />} />
+      <Route path="/skills/pending" element={<SkillApprovalQueue />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </AuthGate>

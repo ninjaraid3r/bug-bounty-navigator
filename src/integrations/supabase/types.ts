@@ -380,6 +380,95 @@ export type Database = {
         }
         Relationships: []
       }
+      recon_map_nodes: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          map_id: string
+          metadata: Json
+          node_key: string
+          node_type: string
+          parent_key: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          map_id: string
+          metadata?: Json
+          node_key: string
+          node_type?: string
+          parent_key?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          map_id?: string
+          metadata?: Json
+          node_key?: string
+          node_type?: string
+          parent_key?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recon_map_nodes_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "recon_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recon_maps: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          id: string
+          killchain: Json
+          mission_id: string
+          node_count: number
+          session_id: string | null
+          summary: string | null
+          target: string
+          tips: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          killchain?: Json
+          mission_id: string
+          node_count?: number
+          session_id?: string | null
+          summary?: string | null
+          target: string
+          tips?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          killchain?: Json
+          mission_id?: string
+          node_count?: number
+          session_id?: string | null
+          summary?: string | null
+          target?: string
+          tips?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           agent_insights: Json
