@@ -54,10 +54,10 @@ export default function SkillApprovalQueue() {
     load();
   }
 
-  const grouped = items.reduce((acc: Record<string, any[]>, a) => {
+  const grouped: Record<string, any[]> = items.reduce((acc, a) => {
     (acc[a.agent_codename] ||= []).push(a);
     return acc;
-  }, {});
+  }, {} as Record<string, any[]>);
 
   return (
     <AppLayout
