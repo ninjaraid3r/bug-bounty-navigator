@@ -260,6 +260,23 @@ export default function AgentProfile() {
 
   async function deleteAutomation(id: string) { await supabase.from("automations").delete().eq("id", id); load(); }
 
+  async function approveAutomation(a: any, edits?: { name?: string; prompt_template?: string; description?: string }) {
+    const patch: any = { status: "approved" };
+    if (edits?.name) patch.name = edits.name;
+    if (edits?.prompt_template) patch.prompt_template = edits.prompt_template;
+    if (edits?.description !== undefined) patch.description = edits.description;
+    const { error } = await supabase.from("automations").update(patch).eq("id", a.id);
+    if (error) return toast.error(error.message);
+    toast.success("Skill approved");
+    load();
+  }
+  async function rejectAutomation(id: string) {
+    if (!confirm("Reject this proposed skill? It will be deleted.")) return;
+    await supabase.from("automations").delete().eq("id", id);
+    toast.success("Rejected");
+    load();
+  }
+
   async function runSkill(automation: any) {
     if (!user) return;
     setRunningId(automation.id);
