@@ -60,7 +60,7 @@ export default function ConversationFeed() {
             .map((l: any) => ({ codename: l.name, role: l.role, prompt: l.prompt }));
         }
       } catch {}
-      const disabledBaseLeads = ["PHANTOM", "VIPER", "SPECTER"].filter(n => !isOn(n));
+      const disabledBaseLeads = ["PHANTOM", "VIPER", "SPECTER", "CARTOGRAPHER"].filter(n => !isOn(n));
       const body = JSON.stringify({
         conversationId: conversation?.id,
         userMessage: text,
