@@ -573,32 +573,67 @@ export default function AgentProfile() {
                     </DialogContent>
                   </Dialog>
                 </CardHeader>
-                <CardContent>
-                  {automations.length === 0 ? (
-                    <p className="text-xs text-muted-foreground font-mono">No skills saved yet.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {automations.map(a => (
-                        <div key={a.id} className="border border-border rounded-md p-3 bg-surface-2/40 hover:border-primary/40 transition-colors">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="font-mono text-sm font-semibold text-foreground truncate">{a.name}</div>
-                              <div className="text-[10px] font-mono text-muted-foreground">{a.category} · used {a.use_count}×</div>
+                <CardContent className="space-y-4">
+                  {/* Pending approval queue */}
+                  {(() => {
+                    const pending = automations.filter(a => a.status === "pending");
+                    const approved = automations.filter(a => a.status !== "pending");
+                    return (
+                      <>
+                        {pending.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                              <span className="text-[10px] font-mono uppercase tracking-widest text-primary">
+                                Pending Approval ({pending.length})
+                              </span>
                             </div>
-                            <div className="flex gap-1 shrink-0">
-                              <Badge variant={a.source === "ai" ? "default" : "outline"} className="text-[9px]">{a.source}</Badge>
-                              <button onClick={() => deleteAutomation(a.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {pending.map(a => (
+                                <PendingSkillCard
+                                  key={a.id}
+                                  automation={a}
+                                  onApprove={(edits) => approveAutomation(a, edits)}
+                                  onReject={() => rejectAutomation(a.id)}
+                                />
+                              ))}
                             </div>
                           </div>
-                          {a.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.description}</p>}
-                          <pre className="mt-2 text-[10px] font-mono text-muted-foreground bg-background/50 p-2 rounded border border-border line-clamp-3 whitespace-pre-wrap">{a.prompt_template}</pre>
-                          <Button size="sm" variant="outline" className="w-full mt-2 h-7 text-[11px] font-mono" disabled={runningId === a.id} onClick={() => runSkill(a)}>
-                            {runningId === a.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Dispatching…</> : <><Play className="w-3 h-3 mr-1" /> Run Skill</>}
-                          </Button>
+                        )}
+
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                            Approved Skills ({approved.length})
+                          </span>
+                          {approved.length === 0 ? (
+                            <p className="text-xs text-muted-foreground font-mono">No skills saved yet.</p>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {approved.map(a => (
+                                <div key={a.id} className="border border-border rounded-md p-3 bg-surface-2/40 hover:border-primary/40 transition-colors">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <div className="font-mono text-sm font-semibold text-foreground truncate">{a.name}</div>
+                                      <div className="text-[10px] font-mono text-muted-foreground">{a.category} · used {a.use_count}×</div>
+                                    </div>
+                                    <div className="flex gap-1 shrink-0">
+                                      <Badge variant={a.source === "ai" ? "default" : "outline"} className="text-[9px]">{a.source}</Badge>
+                                      <button onClick={() => deleteAutomation(a.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                                    </div>
+                                  </div>
+                                  {a.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.description}</p>}
+                                  <pre className="mt-2 text-[10px] font-mono text-muted-foreground bg-background/50 p-2 rounded border border-border line-clamp-3 whitespace-pre-wrap">{a.prompt_template}</pre>
+                                  <Button size="sm" variant="outline" className="w-full mt-2 h-7 text-[11px] font-mono" disabled={runningId === a.id} onClick={() => runSkill(a)}>
+                                    {runningId === a.id ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Dispatching…</> : <><Play className="w-3 h-3 mr-1" /> Run Skill</>}
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </TabsContent>
