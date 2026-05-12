@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2, Loader2,
   Brain, Sparkles, AlertTriangle, Wrench, Search, Hammer, TrendingUp, FileText,
-  Eraser, X, BookOpen, Layers, Send, Database, ChevronRight,
+  Eraser, X, BookOpen, Layers, Send, Database, ChevronRight, Map as MapIcon, Check, ShieldCheck,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import ReconMapsPanel from "@/components/ReconMapsPanel";
 
 const AGENT_META: Record<string, { name: string; type: "manager" | "lead" | "raider"; tagline: string; specialty: string }> = {
   commander: { name: "COMMANDER", type: "manager", tagline: "Strategic mission manager", specialty: "Orchestration · Grading · Memory" },
   phantom:   { name: "PHANTOM",   type: "lead",    tagline: "Recon Lead — OSINT, DNS, scanning", specialty: "Discovery · Surface mapping" },
   viper:     { name: "VIPER",     type: "lead",    tagline: "Exploit Lead — vulns, payloads, attacks", specialty: "Exploitation · PoC crafting" },
   specter:   { name: "SPECTER",   type: "lead",    tagline: "Stealth Lead — evasion, persistence", specialty: "Evasion · OPSEC · Persistence" },
+  cartographer: { name: "CARTOGRAPHER", type: "lead", tagline: "Recon Mapping Lead — attack surface", specialty: "Subdomains · Endpoints · Mind-mapping" },
   "r-001":   { name: "R-001",     type: "raider",  tagline: "Port Scanner Raider", specialty: "Port enumeration" },
   "r-002":   { name: "R-002",     type: "raider",  tagline: "Subdomain Enum Raider", specialty: "Subdomain discovery" },
   "r-003":   { name: "R-003",     type: "raider",  tagline: "Fuzzer Raider", specialty: "Path / param fuzzing" },
