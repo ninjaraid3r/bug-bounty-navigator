@@ -617,10 +617,22 @@ export default function AgentProfile() {
                   </Dialog>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {selSkills.size > 0 && (
+                    <div className="flex items-center gap-2 p-2 rounded border border-primary/40 bg-primary/5">
+                      <span className="text-[11px] font-mono text-primary flex-1">{selSkills.size} selected</span>
+                      <Button size="sm" variant="default" className="h-7 text-[11px]" disabled={grading} onClick={gradeSelectedSkills}>
+                        {grading ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Commander grading…</> : <><ShieldCheck className="w-3 h-3 mr-1" /> Send to Commander</>}
+                      </Button>
+                      <Button size="sm" variant="destructive" className="h-7 text-[11px]"
+                        onClick={() => bulkDelete("automations", Array.from(selSkills), () => setSelSkills(new Set()))}>
+                        <Trash2 className="w-3 h-3 mr-1" /> Delete
+                      </Button>
+                    </div>
+                  )}
                   {/* Pending approval queue */}
                   {(() => {
-                    const pending = automations.filter(a => a.status === "pending");
-                    const approved = automations.filter(a => a.status !== "pending");
+                    const pending = automations.filter(a => a.status === "pending" || a.status === "commander_reviewed");
+                    const approved = automations.filter(a => a.status === "approved");
                     return (
                       <>
                         {pending.length > 0 && (
@@ -636,6 +648,8 @@ export default function AgentProfile() {
                                 <PendingSkillCard
                                   key={a.id}
                                   automation={a}
+                                  selected={selSkills.has(a.id)}
+                                  onToggleSelect={() => setSelSkills(toggle(selSkills, a.id))}
                                   onApprove={(edits) => approveAutomation(a, edits)}
                                   onReject={() => rejectAutomation(a.id)}
                                 />
@@ -655,9 +669,12 @@ export default function AgentProfile() {
                               {approved.map(a => (
                                 <div key={a.id} className="border border-border rounded-md p-3 bg-surface-2/40 hover:border-primary/40 transition-colors">
                                   <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                      <div className="font-mono text-sm font-semibold text-foreground truncate">{a.name}</div>
-                                      <div className="text-[10px] font-mono text-muted-foreground">{a.category} · used {a.use_count}×</div>
+                                    <div className="flex items-start gap-2 min-w-0">
+                                      <Checkbox checked={selSkills.has(a.id)} onCheckedChange={() => setSelSkills(toggle(selSkills, a.id))} className="mt-0.5" />
+                                      <div className="min-w-0">
+                                        <div className="font-mono text-sm font-semibold text-foreground truncate">{a.name}</div>
+                                        <div className="text-[10px] font-mono text-muted-foreground">{a.category} · used {a.use_count}×</div>
+                                      </div>
                                     </div>
                                     <div className="flex gap-1 shrink-0">
                                       <Badge variant={a.source === "ai" ? "default" : "outline"} className="text-[9px]">{a.source}</Badge>
