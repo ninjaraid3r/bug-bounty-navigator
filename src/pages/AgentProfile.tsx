@@ -707,9 +707,19 @@ export default function AgentProfile() {
                   : tasks.length === 0 ? <p className="text-xs text-muted-foreground font-mono">No tasks logged yet.</p>
                   : (
                     <div className="space-y-2">
+                      {selTasks.size > 0 && (
+                        <div className="flex items-center gap-2 p-2 rounded border border-primary/40 bg-primary/5">
+                          <span className="text-[11px] font-mono text-primary flex-1">{selTasks.size} selected</span>
+                          <Button size="sm" variant="destructive" className="h-7 text-[11px]"
+                            onClick={() => bulkDelete("agent_tasks", Array.from(selTasks), () => setSelTasks(new Set()))}>
+                            <Trash2 className="w-3 h-3 mr-1" /> Delete selected
+                          </Button>
+                        </div>
+                      )}
                       {tasks.map(t => (
                         <div key={t.id} className="border border-border rounded-md p-3 bg-surface-2/40">
                           <div className="flex items-start justify-between gap-3">
+                            <Checkbox checked={selTasks.has(t.id)} onCheckedChange={() => setSelTasks(toggle(selTasks, t.id))} className="mt-1 shrink-0" />
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-mono text-foreground truncate">{t.title}</div>
                               <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{new Date(t.created_at).toLocaleString()} · {t.findings_count} signals</div>
