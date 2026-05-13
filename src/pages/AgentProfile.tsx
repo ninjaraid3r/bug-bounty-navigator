@@ -81,6 +81,36 @@ export default function AgentProfile() {
   const [runningId, setRunningId] = useState<string | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [newAuto, setNewAuto] = useState({ name: "", description: "", prompt_template: "", category: "" });
+  const [selSessions, setSelSessions] = useState<Set<string>>(new Set());
+  const [selTasks, setSelTasks] = useState<Set<string>>(new Set());
+  const [selSkills, setSelSkills] = useState<Set<string>>(new Set());
+  const [grading, setGrading] = useState(false);
+
+  const toggle = (set: Set<string>, id: string) => { const n = new Set(set); n.has(id) ? n.delete(id) : n.add(id); return n; };
+
+  async function bulkDelete(table: "sessions" | "agent_tasks" | "automations", ids: string[], clear: () => void) {
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} item${ids.length === 1 ? "" : "s"} permanently?`)) return;
+    const { error } = await supabase.from(table).delete().in("id", ids);
+    if (error) return toast.error(error.message);
+    toast.success(`Deleted ${ids.length}`);
+    clear();
+    load();
+  }
+
+  async function gradeSelectedSkills() {
+    const ids = Array.from(selSkills);
+    if (!ids.length) return toast.error("Select skills to grade");
+    setGrading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("commander-grade-skill", { body: { automationIds: ids } });
+      if (error) throw error;
+      toast.success(`Commander graded ${data?.graded?.length ?? 0} skill(s)`);
+      setSelSkills(new Set());
+      load();
+    } catch (e: any) { toast.error(e?.message || "Grading failed"); }
+    finally { setGrading(false); }
+  }
 
   useEffect(() => { if (user) load(); }, [user, codename]);
 
