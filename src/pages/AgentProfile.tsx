@@ -383,6 +383,12 @@ export default function AgentProfile() {
                 <ShieldCheck className="w-3 h-3 mr-1" /> Skill Approval Queue
               </Button>
               <span className="text-[10px] font-mono text-muted-foreground">{sessions.length} session{sessions.length === 1 ? "" : "s"} on record</span>
+              {selSessions.size > 0 && (
+                <Button size="sm" variant="destructive" className="ml-auto h-7 text-[11px]"
+                  onClick={() => bulkDelete("sessions", Array.from(selSessions), () => setSelSessions(new Set()))}>
+                  <Trash2 className="w-3 h-3 mr-1" /> Delete {selSessions.size} selected
+                </Button>
+              )}
             </div>
             {sessions.length === 0 ? (
               <Card><CardContent className="p-6 text-xs font-mono text-muted-foreground">No sessions logged yet.</CardContent></Card>
@@ -394,6 +400,12 @@ export default function AgentProfile() {
                   <Card>
                     <CardHeader className="py-3">
                       <div className="flex items-center justify-between gap-3">
+                        <Checkbox
+                          checked={selSessions.has(s.id)}
+                          onCheckedChange={() => setSelSessions(toggle(selSessions, s.id))}
+                          onClick={(e) => e.stopPropagation()}
+                          className="shrink-0"
+                        />
                         <CollapsibleTrigger className="flex-1 text-left flex items-center gap-3 hover:text-primary transition-colors">
                           <div className={`text-2xl font-mono font-bold ${gradeColor(s.grade)} shrink-0`}>{s.grade || "—"}</div>
                           <div className="min-w-0 flex-1">
