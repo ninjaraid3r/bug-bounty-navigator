@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -80,6 +81,36 @@ export default function AgentProfile() {
   const [runningId, setRunningId] = useState<string | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [newAuto, setNewAuto] = useState({ name: "", description: "", prompt_template: "", category: "" });
+  const [selSessions, setSelSessions] = useState<Set<string>>(new Set());
+  const [selTasks, setSelTasks] = useState<Set<string>>(new Set());
+  const [selSkills, setSelSkills] = useState<Set<string>>(new Set());
+  const [grading, setGrading] = useState(false);
+
+  const toggle = (set: Set<string>, id: string) => { const n = new Set(set); n.has(id) ? n.delete(id) : n.add(id); return n; };
+
+  async function bulkDelete(table: "sessions" | "agent_tasks" | "automations", ids: string[], clear: () => void) {
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} item${ids.length === 1 ? "" : "s"} permanently?`)) return;
+    const { error } = await supabase.from(table).delete().in("id", ids);
+    if (error) return toast.error(error.message);
+    toast.success(`Deleted ${ids.length}`);
+    clear();
+    load();
+  }
+
+  async function gradeSelectedSkills() {
+    const ids = Array.from(selSkills);
+    if (!ids.length) return toast.error("Select skills to grade");
+    setGrading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("commander-grade-skill", { body: { automationIds: ids } });
+      if (error) throw error;
+      toast.success(`Commander graded ${data?.graded?.length ?? 0} skill(s)`);
+      setSelSkills(new Set());
+      load();
+    } catch (e: any) { toast.error(e?.message || "Grading failed"); }
+    finally { setGrading(false); }
+  }
 
   useEffect(() => { if (user) load(); }, [user, codename]);
 
@@ -352,6 +383,12 @@ export default function AgentProfile() {
                 <ShieldCheck className="w-3 h-3 mr-1" /> Skill Approval Queue
               </Button>
               <span className="text-[10px] font-mono text-muted-foreground">{sessions.length} session{sessions.length === 1 ? "" : "s"} on record</span>
+              {selSessions.size > 0 && (
+                <Button size="sm" variant="destructive" className="ml-auto h-7 text-[11px]"
+                  onClick={() => bulkDelete("sessions", Array.from(selSessions), () => setSelSessions(new Set()))}>
+                  <Trash2 className="w-3 h-3 mr-1" /> Delete {selSessions.size} selected
+                </Button>
+              )}
             </div>
             {sessions.length === 0 ? (
               <Card><CardContent className="p-6 text-xs font-mono text-muted-foreground">No sessions logged yet.</CardContent></Card>
@@ -363,6 +400,12 @@ export default function AgentProfile() {
                   <Card>
                     <CardHeader className="py-3">
                       <div className="flex items-center justify-between gap-3">
+                        <Checkbox
+                          checked={selSessions.has(s.id)}
+                          onCheckedChange={() => setSelSessions(toggle(selSessions, s.id))}
+                          onClick={(e) => e.stopPropagation()}
+                          className="shrink-0"
+                        />
                         <CollapsibleTrigger className="flex-1 text-left flex items-center gap-3 hover:text-primary transition-colors">
                           <div className={`text-2xl font-mono font-bold ${gradeColor(s.grade)} shrink-0`}>{s.grade || "—"}</div>
                           <div className="min-w-0 flex-1">
@@ -574,10 +617,22 @@ export default function AgentProfile() {
                   </Dialog>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {selSkills.size > 0 && (
+                    <div className="flex items-center gap-2 p-2 rounded border border-primary/40 bg-primary/5">
+                      <span className="text-[11px] font-mono text-primary flex-1">{selSkills.size} selected</span>
+                      <Button size="sm" variant="default" className="h-7 text-[11px]" disabled={grading} onClick={gradeSelectedSkills}>
+                        {grading ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Commander grading…</> : <><ShieldCheck className="w-3 h-3 mr-1" /> Send to Commander</>}
+                      </Button>
+                      <Button size="sm" variant="destructive" className="h-7 text-[11px]"
+                        onClick={() => bulkDelete("automations", Array.from(selSkills), () => setSelSkills(new Set()))}>
+                        <Trash2 className="w-3 h-3 mr-1" /> Delete
+                      </Button>
+                    </div>
+                  )}
                   {/* Pending approval queue */}
                   {(() => {
-                    const pending = automations.filter(a => a.status === "pending");
-                    const approved = automations.filter(a => a.status !== "pending");
+                    const pending = automations.filter(a => a.status === "pending" || a.status === "commander_reviewed");
+                    const approved = automations.filter(a => a.status === "approved");
                     return (
                       <>
                         {pending.length > 0 && (
@@ -593,6 +648,8 @@ export default function AgentProfile() {
                                 <PendingSkillCard
                                   key={a.id}
                                   automation={a}
+                                  selected={selSkills.has(a.id)}
+                                  onToggleSelect={() => setSelSkills(toggle(selSkills, a.id))}
                                   onApprove={(edits) => approveAutomation(a, edits)}
                                   onReject={() => rejectAutomation(a.id)}
                                 />
@@ -612,9 +669,12 @@ export default function AgentProfile() {
                               {approved.map(a => (
                                 <div key={a.id} className="border border-border rounded-md p-3 bg-surface-2/40 hover:border-primary/40 transition-colors">
                                   <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                      <div className="font-mono text-sm font-semibold text-foreground truncate">{a.name}</div>
-                                      <div className="text-[10px] font-mono text-muted-foreground">{a.category} · used {a.use_count}×</div>
+                                    <div className="flex items-start gap-2 min-w-0">
+                                      <Checkbox checked={selSkills.has(a.id)} onCheckedChange={() => setSelSkills(toggle(selSkills, a.id))} className="mt-0.5" />
+                                      <div className="min-w-0">
+                                        <div className="font-mono text-sm font-semibold text-foreground truncate">{a.name}</div>
+                                        <div className="text-[10px] font-mono text-muted-foreground">{a.category} · used {a.use_count}×</div>
+                                      </div>
                                     </div>
                                     <div className="flex gap-1 shrink-0">
                                       <Badge variant={a.source === "ai" ? "default" : "outline"} className="text-[9px]">{a.source}</Badge>
@@ -647,9 +707,19 @@ export default function AgentProfile() {
                   : tasks.length === 0 ? <p className="text-xs text-muted-foreground font-mono">No tasks logged yet.</p>
                   : (
                     <div className="space-y-2">
+                      {selTasks.size > 0 && (
+                        <div className="flex items-center gap-2 p-2 rounded border border-primary/40 bg-primary/5">
+                          <span className="text-[11px] font-mono text-primary flex-1">{selTasks.size} selected</span>
+                          <Button size="sm" variant="destructive" className="h-7 text-[11px]"
+                            onClick={() => bulkDelete("agent_tasks", Array.from(selTasks), () => setSelTasks(new Set()))}>
+                            <Trash2 className="w-3 h-3 mr-1" /> Delete selected
+                          </Button>
+                        </div>
+                      )}
                       {tasks.map(t => (
                         <div key={t.id} className="border border-border rounded-md p-3 bg-surface-2/40">
                           <div className="flex items-start justify-between gap-3">
+                            <Checkbox checked={selTasks.has(t.id)} onCheckedChange={() => setSelTasks(toggle(selTasks, t.id))} className="mt-1 shrink-0" />
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-mono text-foreground truncate">{t.title}</div>
                               <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{new Date(t.created_at).toLocaleString()} · {t.findings_count} signals</div>
@@ -753,27 +823,34 @@ function AccomplishCard({ icon: Icon, title, items }: { icon: any; title: string
   );
 }
 
-function PendingSkillCard({ automation, onApprove, onReject }: {
+function PendingSkillCard({ automation, onApprove, onReject, selected, onToggleSelect }: {
   automation: any;
   onApprove: (edits?: { name?: string; prompt_template?: string; description?: string }) => void;
   onReject: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(automation.name || "");
   const [desc, setDesc] = useState(automation.description || "");
   const [tpl, setTpl] = useState(automation.prompt_template || "");
+  const grade = automation.metadata?.commander_grade;
+  const graded = automation.status === "commander_reviewed" && grade;
   return (
-    <div className="border border-primary/40 rounded-md p-3 bg-primary/5">
+    <div className={`border rounded-md p-3 ${graded ? "border-primary bg-primary/10" : "border-primary/40 bg-primary/5"}`}>
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="min-w-0 flex-1">
-          {editing ? (
-            <Input className="h-7 text-xs font-mono mb-1" value={name} onChange={(e) => setName(e.target.value)} />
-          ) : (
-            <div className="font-mono text-sm font-semibold text-foreground truncate">{automation.name}</div>
-          )}
-          <div className="text-[10px] font-mono text-muted-foreground">{automation.category} · proposed by {automation.source}</div>
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          {onToggleSelect && <Checkbox checked={!!selected} onCheckedChange={onToggleSelect} className="mt-0.5" />}
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <Input className="h-7 text-xs font-mono mb-1" value={name} onChange={(e) => setName(e.target.value)} />
+            ) : (
+              <div className="font-mono text-sm font-semibold text-foreground truncate">{automation.name}</div>
+            )}
+            <div className="text-[10px] font-mono text-muted-foreground">{automation.category} · proposed by {automation.agent_codename || automation.source}</div>
+          </div>
         </div>
-        <Badge className="text-[9px] bg-primary/20 text-primary border-primary/40">PENDING</Badge>
+        <Badge className="text-[9px] bg-primary/20 text-primary border-primary/40">{graded ? "GRADED" : "AWAITING COMMANDER"}</Badge>
       </div>
       {editing ? (
         <>
@@ -785,6 +862,23 @@ function PendingSkillCard({ automation, onApprove, onReject }: {
           {automation.description && <p className="text-xs text-muted-foreground mb-1.5">{automation.description}</p>}
           <pre className="text-[10px] font-mono text-muted-foreground bg-background/60 p-2 rounded border border-border line-clamp-4 whitespace-pre-wrap">{automation.prompt_template}</pre>
         </>
+      )}
+      {graded && (
+        <div className="mt-2 border border-primary/40 rounded-md bg-background/40 p-2 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-primary">Commander Grade</span>
+            <span className="text-[10px] font-mono text-primary">{grade.total}/15 · {grade.verdict?.replace("recommend_", "")}</span>
+          </div>
+          <GradeRow label="Implementable today" score={grade.implementable_today.score} note={grade.implementable_today.note} />
+          <GradeRow label="Team-relevant" score={grade.team_relevant.score} note={grade.team_relevant.note} />
+          <GradeRow label="Scaling potential" score={grade.scaling_potential.score} note={grade.scaling_potential.note} />
+          {Array.isArray(grade.scaling_potential.scaling_ideas) && grade.scaling_potential.scaling_ideas.length > 0 && (
+            <ul className="text-[10px] text-muted-foreground list-disc pl-4">
+              {grade.scaling_potential.scaling_ideas.map((s: string, i: number) => <li key={i}>{s}</li>)}
+            </ul>
+          )}
+          {grade.verdict_reason && <p className="text-[10px] text-foreground italic">"{grade.verdict_reason}"</p>}
+        </div>
       )}
       <div className="flex gap-1 mt-2">
         <Button size="sm" variant="default" className="h-7 text-[11px] flex-1"
@@ -798,6 +892,19 @@ function PendingSkillCard({ automation, onApprove, onReject }: {
           <X className="w-3 h-3" />
         </Button>
       </div>
+    </div>
+  );
+}
+
+function GradeRow({ label, score, note }: { label: string; score: number; note: string }) {
+  const color = score >= 4 ? "text-primary" : score >= 3 ? "text-foreground" : "text-orange-400";
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <span className={`text-[10px] font-mono font-bold w-6 ${color}`}>{score}/5</span>
+        <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{label}</span>
+      </div>
+      {note && <p className="text-[10px] text-muted-foreground pl-8">{note}</p>}
     </div>
   );
 }
