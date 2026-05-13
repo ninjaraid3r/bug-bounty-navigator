@@ -823,27 +823,34 @@ function AccomplishCard({ icon: Icon, title, items }: { icon: any; title: string
   );
 }
 
-function PendingSkillCard({ automation, onApprove, onReject }: {
+function PendingSkillCard({ automation, onApprove, onReject, selected, onToggleSelect }: {
   automation: any;
   onApprove: (edits?: { name?: string; prompt_template?: string; description?: string }) => void;
   onReject: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(automation.name || "");
   const [desc, setDesc] = useState(automation.description || "");
   const [tpl, setTpl] = useState(automation.prompt_template || "");
+  const grade = automation.metadata?.commander_grade;
+  const graded = automation.status === "commander_reviewed" && grade;
   return (
-    <div className="border border-primary/40 rounded-md p-3 bg-primary/5">
+    <div className={`border rounded-md p-3 ${graded ? "border-primary bg-primary/10" : "border-primary/40 bg-primary/5"}`}>
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="min-w-0 flex-1">
-          {editing ? (
-            <Input className="h-7 text-xs font-mono mb-1" value={name} onChange={(e) => setName(e.target.value)} />
-          ) : (
-            <div className="font-mono text-sm font-semibold text-foreground truncate">{automation.name}</div>
-          )}
-          <div className="text-[10px] font-mono text-muted-foreground">{automation.category} · proposed by {automation.source}</div>
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          {onToggleSelect && <Checkbox checked={!!selected} onCheckedChange={onToggleSelect} className="mt-0.5" />}
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <Input className="h-7 text-xs font-mono mb-1" value={name} onChange={(e) => setName(e.target.value)} />
+            ) : (
+              <div className="font-mono text-sm font-semibold text-foreground truncate">{automation.name}</div>
+            )}
+            <div className="text-[10px] font-mono text-muted-foreground">{automation.category} · proposed by {automation.agent_codename || automation.source}</div>
+          </div>
         </div>
-        <Badge className="text-[9px] bg-primary/20 text-primary border-primary/40">PENDING</Badge>
+        <Badge className="text-[9px] bg-primary/20 text-primary border-primary/40">{graded ? "GRADED" : "AWAITING COMMANDER"}</Badge>
       </div>
       {editing ? (
         <>
@@ -855,6 +862,23 @@ function PendingSkillCard({ automation, onApprove, onReject }: {
           {automation.description && <p className="text-xs text-muted-foreground mb-1.5">{automation.description}</p>}
           <pre className="text-[10px] font-mono text-muted-foreground bg-background/60 p-2 rounded border border-border line-clamp-4 whitespace-pre-wrap">{automation.prompt_template}</pre>
         </>
+      )}
+      {graded && (
+        <div className="mt-2 border border-primary/40 rounded-md bg-background/40 p-2 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-primary">Commander Grade</span>
+            <span className="text-[10px] font-mono text-primary">{grade.total}/15 · {grade.verdict?.replace("recommend_", "")}</span>
+          </div>
+          <GradeRow label="Implementable today" score={grade.implementable_today.score} note={grade.implementable_today.note} />
+          <GradeRow label="Team-relevant" score={grade.team_relevant.score} note={grade.team_relevant.note} />
+          <GradeRow label="Scaling potential" score={grade.scaling_potential.score} note={grade.scaling_potential.note} />
+          {Array.isArray(grade.scaling_potential.scaling_ideas) && grade.scaling_potential.scaling_ideas.length > 0 && (
+            <ul className="text-[10px] text-muted-foreground list-disc pl-4">
+              {grade.scaling_potential.scaling_ideas.map((s: string, i: number) => <li key={i}>{s}</li>)}
+            </ul>
+          )}
+          {grade.verdict_reason && <p className="text-[10px] text-foreground italic">"{grade.verdict_reason}"</p>}
+        </div>
       )}
       <div className="flex gap-1 mt-2">
         <Button size="sm" variant="default" className="h-7 text-[11px] flex-1"
@@ -868,6 +892,19 @@ function PendingSkillCard({ automation, onApprove, onReject }: {
           <X className="w-3 h-3" />
         </Button>
       </div>
+    </div>
+  );
+}
+
+function GradeRow({ label, score, note }: { label: string; score: number; note: string }) {
+  const color = score >= 4 ? "text-primary" : score >= 3 ? "text-foreground" : "text-orange-400";
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <span className={`text-[10px] font-mono font-bold w-6 ${color}`}>{score}/5</span>
+        <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{label}</span>
+      </div>
+      {note && <p className="text-[10px] text-muted-foreground pl-8">{note}</p>}
     </div>
   );
 }
