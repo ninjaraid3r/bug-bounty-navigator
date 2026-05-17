@@ -289,7 +289,7 @@ serve(async (req) => {
                 metadata: { note: n.note || null },
               }));
             if (nodeRows.length) {
-              await supabase.from("recon_map_nodes").upsert(nodeRows, { onConflict: "map_id,node_key", ignoreDuplicates: true });
+              await supabase.from("recon_map_nodes").upsert(nodeRows, { onConflict: "map_id,node_key" });
               const { count } = await supabase.from("recon_map_nodes").select("id", { count: "exact", head: true }).eq("map_id", mapId);
               await supabase.from("recon_maps").update({ node_count: count || nodeRows.length }).eq("id", mapId);
             }
