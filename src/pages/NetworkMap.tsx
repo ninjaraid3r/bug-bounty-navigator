@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Network, ChevronRight, Activity, Bug, Shield, Server, Database, Globe, Layers, ArrowLeft } from "lucide-react";
+import { Network, ChevronRight, Activity, Bug, Shield, Server, Database, Globe, Layers, ArrowLeft, Map as MapIcon, Lock } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import ReconMapDetail from "@/components/ReconMapDetail";
 
 // Layer model: each target gets a layered map (Edge → DNS → Web → API → Data)
 type LayerKey = "edge" | "dns" | "web" | "api" | "data";
@@ -70,12 +71,50 @@ interface AttemptHit {
   matched: string;
 }
 
+interface ReconMapLite {
+  id: string;
+  target: string;
+  summary: string | null;
+  tips: any;
+  killchain: any;
+  node_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function NetworkMap() {
   const { user } = useAuth();
   const [selected, setSelected] = useState<MappedTarget | null>(null);
   const [activeLayer, setActiveLayer] = useState<LayerKey | null>(null);
   const [hits, setHits] = useState<Record<LayerKey, AttemptHit[]>>({} as any);
   const [loading, setLoading] = useState(false);
+  const [reconMaps, setReconMaps] = useState<ReconMapLite[]>([]);
+  const [activeReconMap, setActiveReconMap] = useState<ReconMapLite | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    loadReconMaps();
+    const ch = supabase
+      .channel("network-map-recon")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "recon_maps", filter: `user_id=eq.${user.id}` },
+        () => loadReconMaps()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  async function loadReconMaps() {
+    if (!user) return;
+    const { data } = await supabase
+      .from("recon_maps")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+    setReconMaps((data as any) || []);
+  }
 
   useEffect(() => {
     if (!user || !selected) return;
