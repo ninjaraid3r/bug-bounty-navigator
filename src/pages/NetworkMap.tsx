@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Network, ChevronRight, Activity, Bug, Shield, Server, Database, Globe, Layers, ArrowLeft } from "lucide-react";
+import { Network, ChevronRight, Activity, Bug, Shield, Server, Database, Globe, Layers, ArrowLeft, Map as MapIcon, Lock } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import ReconMapDetail from "@/components/ReconMapDetail";
 
 // Layer model: each target gets a layered map (Edge → DNS → Web → API → Data)
 type LayerKey = "edge" | "dns" | "web" | "api" | "data";
@@ -70,12 +71,50 @@ interface AttemptHit {
   matched: string;
 }
 
+interface ReconMapLite {
+  id: string;
+  target: string;
+  summary: string | null;
+  tips: any;
+  killchain: any;
+  node_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function NetworkMap() {
   const { user } = useAuth();
   const [selected, setSelected] = useState<MappedTarget | null>(null);
   const [activeLayer, setActiveLayer] = useState<LayerKey | null>(null);
   const [hits, setHits] = useState<Record<LayerKey, AttemptHit[]>>({} as any);
   const [loading, setLoading] = useState(false);
+  const [reconMaps, setReconMaps] = useState<ReconMapLite[]>([]);
+  const [activeReconMap, setActiveReconMap] = useState<ReconMapLite | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    loadReconMaps();
+    const ch = supabase
+      .channel("network-map-recon")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "recon_maps", filter: `user_id=eq.${user.id}` },
+        () => loadReconMaps()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  async function loadReconMaps() {
+    if (!user) return;
+    const { data } = await supabase
+      .from("recon_maps")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+    setReconMaps((data as any) || []);
+  }
 
   useEffect(() => {
     if (!user || !selected) return;
@@ -116,6 +155,26 @@ export default function NetworkMap() {
     setLoading(false);
   }
 
+  // If a Cartographer recon map is open, render its full detail (graph/canvas/both)
+  if (activeReconMap) {
+    return (
+      <AppLayout
+        title="NETWORK MAP"
+        subtitle={`Cartographer Recon — ${activeReconMap.target}`}
+        icon={Network}
+        actions={
+          <Button size="sm" variant="outline" onClick={() => setActiveReconMap(null)} className="font-mono text-xs">
+            <ArrowLeft className="w-3.5 h-3.5" /> All Targets
+          </Button>
+        }
+      >
+        <div className="p-5">
+          <ReconMapDetail map={activeReconMap as any} defaultView="split" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout
       title="NETWORK MAP"
@@ -128,30 +187,80 @@ export default function NetworkMap() {
       ) : null}
     >
       {!selected ? (
-        <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {TARGET_MAPS.map((m) => (
-            <button
-              key={m.target}
-              onClick={() => setSelected(m)}
-              className="text-left bg-surface-1 border border-border rounded-lg p-4 hover:border-primary/50 hover:shadow-glow transition-all"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-mono text-sm font-bold text-foreground">{m.target}</h3>
-                <Badge variant="outline" className="font-mono text-[9px]">{m.program}</Badge>
-              </div>
-              <div className="text-[10px] font-mono text-muted-foreground mb-3">
-                {m.layers.length} layers · {m.layers.reduce((a, l) => a + l.nodes.length, 0)} nodes
-              </div>
-              <div className="flex gap-1.5 flex-wrap">
-                {m.layers.map((l) => (
-                  <span key={l.key} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-2 text-muted-foreground border border-border">
-                    {l.label}
-                  </span>
+        <div className="p-5 space-y-6">
+          {/* Cartographer live recon maps */}
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <MapIcon className="w-4 h-4 text-primary" />
+              <h2 className="font-mono text-xs font-bold text-primary uppercase tracking-widest neon-gold">
+                Cartographer Recon Maps
+              </h2>
+              <Badge variant="outline" className="text-[9px]"><Lock className="w-2.5 h-2.5 mr-1" /> Live · Permanent</Badge>
+              <span className="text-[10px] font-mono text-muted-foreground">({reconMaps.length})</span>
+            </div>
+            {reconMaps.length === 0 ? (
+              <p className="text-xs font-mono text-muted-foreground italic">
+                No recon maps yet — toggle CARTOGRAPHER ON in the right sidebar and run a recon command to populate.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {reconMaps.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setActiveReconMap(m)}
+                    className="text-left bg-surface-1 border border-primary/30 rounded-lg p-4 hover:border-primary hover:shadow-glow transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-mono text-sm font-bold text-primary truncate">{m.target}</h3>
+                      <Badge variant="outline" className="font-mono text-[9px]">CARTO</Badge>
+                    </div>
+                    <div className="text-[10px] font-mono text-muted-foreground mb-3">
+                      {m.node_count} nodes · {Array.isArray(m.tips) ? m.tips.length : 0} tips · {Array.isArray(m.killchain) ? m.killchain.length : 0} kill-chain
+                    </div>
+                    {m.summary && (
+                      <p className="text-[10px] text-muted-foreground line-clamp-2 mb-2">{m.summary}</p>
+                    )}
+                    <div className="text-[10px] font-mono text-primary mt-2">Open graph + canvas →</div>
+                  </button>
                 ))}
               </div>
-              <div className="text-[10px] font-mono text-primary mt-3">Open map →</div>
-            </button>
-          ))}
+            )}
+          </section>
+
+          {/* Static layered demo targets */}
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <Layers className="w-4 h-4 text-muted-foreground" />
+              <h2 className="font-mono text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                Layered Reference Maps
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {TARGET_MAPS.map((m) => (
+                <button
+                  key={m.target}
+                  onClick={() => setSelected(m)}
+                  className="text-left bg-surface-1 border border-border rounded-lg p-4 hover:border-primary/50 hover:shadow-glow transition-all"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-mono text-sm font-bold text-foreground">{m.target}</h3>
+                    <Badge variant="outline" className="font-mono text-[9px]">{m.program}</Badge>
+                  </div>
+                  <div className="text-[10px] font-mono text-muted-foreground mb-3">
+                    {m.layers.length} layers · {m.layers.reduce((a, l) => a + l.nodes.length, 0)} nodes
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {m.layers.map((l) => (
+                      <span key={l.key} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-2 text-muted-foreground border border-border">
+                        {l.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="text-[10px] font-mono text-primary mt-3">Open layered view →</div>
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
       ) : (
         <div className="p-5 grid grid-cols-1 lg:grid-cols-3 gap-4">

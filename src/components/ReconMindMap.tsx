@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useCallback } from "react";
 import {
   ReactFlow,
   Background,
@@ -18,6 +18,8 @@ export interface ReconNodeRow {
   parent_key: string | null;
   label: string;
   node_type: string;
+  impact?: string | null;
+  details?: string | null;
   metadata?: any;
 }
 
@@ -33,12 +35,19 @@ const TYPE_COLORS: Record<string, { bg: string; border: string; fg: string }> = 
   note:      { bg: "hsl(220 20% 10%)",        border: "hsl(220 10% 35%)", fg: "hsl(220 10% 75%)" },
 };
 
+export const IMPACT_COLORS: Record<string, string> = {
+  critical: "hsl(0 90% 55%)",
+  high:     "hsl(20 95% 55%)",
+  medium:   "hsl(45 100% 55%)",
+  low:      "hsl(140 50% 50%)",
+  info:     "hsl(220 10% 55%)",
+};
+
 function colorFor(type: string) {
   return TYPE_COLORS[type] || TYPE_COLORS.note;
 }
 
-// Radial layout: root at center, children fanned in concentric rings.
-function layout(nodes: ReconNodeRow[]): { rfNodes: Node[]; rfEdges: Edge[] } {
+function layout(nodes: ReconNodeRow[], onClick: (n: ReconNodeRow) => void): { rfNodes: Node[]; rfEdges: Edge[] } {
   const byKey = new Map(nodes.map((n) => [n.node_key, n]));
   const childrenOf = new Map<string | null, ReconNodeRow[]>();
   for (const n of nodes) {
@@ -49,31 +58,21 @@ function layout(nodes: ReconNodeRow[]): { rfNodes: Node[]; rfEdges: Edge[] } {
 
   const positions = new Map<string, { x: number; y: number; depth: number }>();
   const roots = childrenOf.get(null) || [];
-  // Single virtual root anchor at (0,0)
   const RADIUS = 220;
 
   function place(key: string, depth: number, angleStart: number, angleEnd: number) {
     const angle = (angleStart + angleEnd) / 2;
     const r = depth * RADIUS;
-    positions.set(key, {
-      x: Math.cos(angle) * r,
-      y: Math.sin(angle) * r,
-      depth,
-    });
+    positions.set(key, { x: Math.cos(angle) * r, y: Math.sin(angle) * r, depth });
     const kids = childrenOf.get(key) || [];
     if (!kids.length) return;
     const span = Math.max((angleEnd - angleStart), Math.PI / 6);
     const step = span / kids.length;
-    kids.forEach((k, i) => {
-      const a0 = angleStart + step * i;
-      const a1 = a0 + step;
-      place(k.node_key, depth + 1, a0, a1);
-    });
+    kids.forEach((k, i) => place(k.node_key, depth + 1, angleStart + step * i, angleStart + step * (i + 1)));
   }
 
-  if (roots.length === 1) {
-    place(roots[0].node_key, 0, 0, Math.PI * 2);
-  } else {
+  if (roots.length === 1) place(roots[0].node_key, 0, 0, Math.PI * 2);
+  else {
     const step = (Math.PI * 2) / Math.max(roots.length, 1);
     roots.forEach((r, i) => place(r.node_key, 1, step * i - step / 2, step * i + step / 2));
   }
@@ -82,23 +81,29 @@ function layout(nodes: ReconNodeRow[]): { rfNodes: Node[]; rfEdges: Edge[] } {
     const pos = positions.get(n.node_key) || { x: 0, y: 0, depth: 0 };
     const c = colorFor(n.node_type);
     const isRoot = n.node_type === "root";
+    const impactColor = n.impact && IMPACT_COLORS[n.impact] ? IMPACT_COLORS[n.impact] : null;
     return {
       id: n.node_key,
       position: { x: pos.x, y: pos.y },
-      data: { label: n.label },
+      data: { label: n.label, raw: n },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
       style: {
         background: c.bg,
-        border: `1px solid ${c.border}`,
+        border: `${impactColor ? 2 : 1}px solid ${impactColor || c.border}`,
         color: c.fg,
         fontFamily: "JetBrains Mono, monospace",
         fontSize: isRoot ? 13 : 11,
         fontWeight: isRoot ? 700 : 500,
         padding: isRoot ? "10px 14px" : "6px 10px",
         borderRadius: 6,
-        boxShadow: isRoot ? `0 0 24px ${c.border}` : "none",
+        boxShadow: isRoot
+          ? `0 0 24px ${c.border}`
+          : impactColor
+            ? `0 0 10px ${impactColor}66`
+            : "none",
         letterSpacing: "0.04em",
+        cursor: "pointer",
       },
     };
   });
@@ -116,8 +121,14 @@ function layout(nodes: ReconNodeRow[]): { rfNodes: Node[]; rfEdges: Edge[] } {
   return { rfNodes, rfEdges };
 }
 
-export default function ReconMindMap({ nodes }: { nodes: ReconNodeRow[] }) {
-  const { rfNodes, rfEdges } = useMemo(() => layout(nodes), [nodes]);
+export default function ReconMindMap({
+  nodes,
+  onNodeClick,
+}: {
+  nodes: ReconNodeRow[];
+  onNodeClick?: (n: ReconNodeRow) => void;
+}) {
+  const { rfNodes, rfEdges } = useMemo(() => layout(nodes, onNodeClick || (() => {})), [nodes, onNodeClick]);
   const [flowNodes, setNodes] = useNodesState(rfNodes);
   const [flowEdges, setEdges] = useEdgesState(rfEdges);
 
@@ -125,6 +136,11 @@ export default function ReconMindMap({ nodes }: { nodes: ReconNodeRow[] }) {
     setNodes(rfNodes);
     setEdges(rfEdges);
   }, [rfNodes, rfEdges, setNodes, setEdges]);
+
+  const handleClick = useCallback((_: any, node: Node) => {
+    const raw = (node.data as any)?.raw as ReconNodeRow | undefined;
+    if (raw && onNodeClick) onNodeClick(raw);
+  }, [onNodeClick]);
 
   if (!nodes.length) {
     return (
@@ -147,6 +163,7 @@ export default function ReconMindMap({ nodes }: { nodes: ReconNodeRow[] }) {
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable
+        onNodeClick={handleClick}
       >
         <Background color="hsl(45 30% 20%)" gap={20} />
         <Controls className="!bg-surface-2 !border-border" />

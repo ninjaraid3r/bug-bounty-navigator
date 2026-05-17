@@ -383,7 +383,9 @@ export type Database = {
       recon_map_nodes: {
         Row: {
           created_at: string
+          details: string | null
           id: string
+          impact: string | null
           label: string
           map_id: string
           metadata: Json
@@ -394,7 +396,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          details?: string | null
           id?: string
+          impact?: string | null
           label: string
           map_id: string
           metadata?: Json
@@ -405,7 +409,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          details?: string | null
           id?: string
+          impact?: string | null
           label?: string
           map_id?: string
           metadata?: Json
