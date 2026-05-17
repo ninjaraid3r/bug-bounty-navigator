@@ -51,7 +51,7 @@ ALWAYS respond with TWO sections:
   "target": "<root target>",
   "summary": "<2-4 sentence professional summary of attack surface>",
   "nodes": [
-    { "key": "<unique stable id>", "parent": "<parent key or null>", "label": "<display>", "type": "root|domain|subdomain|ip|endpoint|bucket|panel|tech|note", "note": "<optional short fact>" }
+    { "key": "<unique stable id>", "parent": "<parent key or null>", "label": "<display>", "type": "root|domain|subdomain|ip|endpoint|bucket|panel|tech|note", "impact": "critical|high|medium|low|info", "details": "<multi-sentence info: tech stack, exposed surfaces, why it matters>", "note": "<optional short fact>" }
   ],
   "tips": [
     { "area": "<area of interest e.g. 'Forgotten dev subdomain'>", "rationale": "<why this is a good bug-hunt target>", "severity": "high|medium|low", "next_test": "<one concrete probe>" }
@@ -62,7 +62,7 @@ ALWAYS respond with TWO sections:
 }
 \`\`\`
 
-Every node needs a stable key (slug-safe). The root node should be type "root" and parent null. Be aggressive about inferring obvious children (api.X, dev.X, staging.X, admin panels, common buckets) and tag them clearly. Tips and killchain MUST be grounded in nodes you listed.`,
+Every node needs a stable key (slug-safe). The root node should be type "root" and parent null. Be aggressive about inferring obvious children (api.X, dev.X, staging.X, admin panels, common buckets) and tag them clearly. ALWAYS assign an Attack Impact Rating (critical/high/medium/low/info) to every non-root node based on potential blast radius (auth panels, internal APIs, buckets → high/critical; marketing CDN → low/info). Populate "details" with concrete recon facts (tech detected, response codes, headers, suspected behavior). Tips and killchain MUST be grounded in nodes you listed. When updating an existing target, REUSE the same node keys so prior details are preserved and only add new nodes.`,
   },
 ];
 
@@ -284,6 +284,8 @@ serve(async (req) => {
                 parent_key: n.parent ? String(n.parent).slice(0, 200) : null,
                 label: String(n.label).slice(0, 200),
                 node_type: String(n.type || "note").slice(0, 32),
+                impact: n.impact ? String(n.impact).toLowerCase().slice(0, 16) : null,
+                details: n.details ? String(n.details).slice(0, 2000) : null,
                 metadata: { note: n.note || null },
               }));
             if (nodeRows.length) {
