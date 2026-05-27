@@ -13,7 +13,18 @@ const AGENT_CHAIN = [
     codename: "COMMANDER",
     sender_name: "Commander",
     personality: `You are Commander — the strategic mission manager of LiQ.Raid3r, an elite bug bounty agent orchestrator (evil twin of XBOW). You coordinate Leads and Raiders.
-Your job: Analyze the user's command, break it into tactical objectives, and delegate to your Leads. You speak in short, decisive military-ops style. Always outline a plan with numbered steps. Reference specific tools and techniques. You address the user as "Operator".`,
+
+CONVERSATION PROTOCOL — IMPORTANT:
+You speak DIRECTLY and ONLY with the Operator first. Leads are NOT in the room unless the Operator explicitly summons them. In each turn:
+1) Discuss the situation, ask clarifying questions, refine the plan WITH the Operator.
+2) Propose a numbered tactical plan (steps + which Lead would own each step).
+3) End every response with a single line listing the Lead codename(s) you recommend calling next, formatted EXACTLY as:
+   RECOMMENDED LEADS: PHANTOM, VIPER
+   (or "RECOMMENDED LEADS: none" if you need more info from the Operator first).
+
+The Operator decides whether to call those Leads via the "Call Lead" buttons in the UI. Do NOT roleplay Lead responses yourself.
+
+Tone: short, decisive, military-ops. Address the user as "Operator". Reference specific tools/techniques.`,
   },
   {
     role: "lead",
@@ -90,10 +101,16 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, userMessage, history, missionId, extraLeads, disabledBaseLeads } = await req.json();
+    const { conversationId, userMessage, history, missionId, extraLeads, disabledBaseLeads, invokeLeads, skipCommander } = await req.json();
     const disabledSet = new Set(
       Array.isArray(disabledBaseLeads)
         ? disabledBaseLeads.map((s: any) => String(s).toUpperCase())
+        : []
+    );
+    // Operator-driven Lead invocation. If invokeLeads is omitted/empty -> Commander-only turn.
+    const invokeSet = new Set(
+      Array.isArray(invokeLeads)
+        ? invokeLeads.map((s: any) => String(s).toUpperCase().trim()).filter(Boolean)
         : []
     );
     if (!conversationId || !userMessage) {
@@ -158,32 +175,36 @@ serve(async (req) => {
 
     const agentResponses: any[] = [];
 
-    const commander = AGENT_CHAIN[0];
-    const cmdMessages = [
-      { role: "system", content: commander.personality },
-      ...contextMessages,
-      { role: "user", content: userMessage },
-    ];
+    let cmdResp = "";
+    if (!skipCommander) {
+      const commander = AGENT_CHAIN[0];
+      const cmdMessages = [
+        { role: "system", content: commander.personality },
+        ...contextMessages,
+        { role: "user", content: userMessage },
+      ];
+      cmdResp = await callAI(LOVABLE_API_KEY, cmdMessages);
+      agentResponses.push({
+        role: commander.role,
+        sender_name: commander.sender_name,
+        content: cmdResp,
+      });
+    }
 
-    const cmdResp = await callAI(LOVABLE_API_KEY, cmdMessages);
-    agentResponses.push({
-      role: commander.role,
-      sender_name: commander.sender_name,
-      content: cmdResp,
-    });
-
+    // Only run Leads the Operator explicitly summoned.
     const enabledBaseLeads = AGENT_CHAIN.slice(1).filter(
-      (lead) => !disabledSet.has(lead.codename)
+      (lead) => !disabledSet.has(lead.codename) && invokeSet.has(lead.codename)
     );
-    const leadsToRun = [...enabledBaseLeads, ...dynamicLeads];
+    const enabledDynamic = dynamicLeads.filter((l) => invokeSet.has(l.codename));
+    const leadsToRun = [...enabledBaseLeads, ...enabledDynamic];
 
     const leadPromises = leadsToRun.map(async (lead) => {
       const leadMessages = [
         { role: "system", content: lead.personality },
         ...contextMessages,
         { role: "user", content: userMessage },
-        { role: "assistant", content: `[Commander]: ${cmdResp}` },
-        { role: "user", content: `Commander has issued directives. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 250 words.` },
+        ...(cmdResp ? [{ role: "assistant", content: `[Commander]: ${cmdResp}` }] : []),
+        { role: "user", content: `Operator has summoned you. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 250 words.` },
       ];
       const resp = await callAI(LOVABLE_API_KEY, leadMessages, lead.codename === CARTO ? 1100 : 600);
       return { role: lead.role, codename: lead.codename, sender_name: lead.sender_name, content: resp };

@@ -121,6 +121,22 @@ export function useMessages(conversationId: string | undefined) {
           setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+        (payload) => {
+          const msg = payload.new as DBMessage;
+          setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+        (payload) => {
+          const oldMsg = payload.old as { id: string };
+          setMessages(prev => prev.filter(m => m.id !== oldMsg.id));
+        }
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
