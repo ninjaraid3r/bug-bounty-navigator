@@ -175,32 +175,36 @@ serve(async (req) => {
 
     const agentResponses: any[] = [];
 
-    const commander = AGENT_CHAIN[0];
-    const cmdMessages = [
-      { role: "system", content: commander.personality },
-      ...contextMessages,
-      { role: "user", content: userMessage },
-    ];
+    let cmdResp = "";
+    if (!skipCommander) {
+      const commander = AGENT_CHAIN[0];
+      const cmdMessages = [
+        { role: "system", content: commander.personality },
+        ...contextMessages,
+        { role: "user", content: userMessage },
+      ];
+      cmdResp = await callAI(LOVABLE_API_KEY, cmdMessages);
+      agentResponses.push({
+        role: commander.role,
+        sender_name: commander.sender_name,
+        content: cmdResp,
+      });
+    }
 
-    const cmdResp = await callAI(LOVABLE_API_KEY, cmdMessages);
-    agentResponses.push({
-      role: commander.role,
-      sender_name: commander.sender_name,
-      content: cmdResp,
-    });
-
+    // Only run Leads the Operator explicitly summoned.
     const enabledBaseLeads = AGENT_CHAIN.slice(1).filter(
-      (lead) => !disabledSet.has(lead.codename)
+      (lead) => !disabledSet.has(lead.codename) && invokeSet.has(lead.codename)
     );
-    const leadsToRun = [...enabledBaseLeads, ...dynamicLeads];
+    const enabledDynamic = dynamicLeads.filter((l) => invokeSet.has(l.codename));
+    const leadsToRun = [...enabledBaseLeads, ...enabledDynamic];
 
     const leadPromises = leadsToRun.map(async (lead) => {
       const leadMessages = [
         { role: "system", content: lead.personality },
         ...contextMessages,
         { role: "user", content: userMessage },
-        { role: "assistant", content: `[Commander]: ${cmdResp}` },
-        { role: "user", content: `Commander has issued directives. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 250 words.` },
+        ...(cmdResp ? [{ role: "assistant", content: `[Commander]: ${cmdResp}` }] : []),
+        { role: "user", content: `Operator has summoned you. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 250 words.` },
       ];
       const resp = await callAI(LOVABLE_API_KEY, leadMessages, lead.codename === CARTO ? 1100 : 600);
       return { role: lead.role, codename: lead.codename, sender_name: lead.sender_name, content: resp };
