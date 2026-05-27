@@ -101,10 +101,16 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, userMessage, history, missionId, extraLeads, disabledBaseLeads } = await req.json();
+    const { conversationId, userMessage, history, missionId, extraLeads, disabledBaseLeads, invokeLeads, skipCommander } = await req.json();
     const disabledSet = new Set(
       Array.isArray(disabledBaseLeads)
         ? disabledBaseLeads.map((s: any) => String(s).toUpperCase())
+        : []
+    );
+    // Operator-driven Lead invocation. If invokeLeads is omitted/empty -> Commander-only turn.
+    const invokeSet = new Set(
+      Array.isArray(invokeLeads)
+        ? invokeLeads.map((s: any) => String(s).toUpperCase().trim()).filter(Boolean)
         : []
     );
     if (!conversationId || !userMessage) {
