@@ -139,12 +139,18 @@ serve(async (req) => {
     let missionTarget: string | undefined;
     if (!resolvedMissionId) {
       const { data: convo } = await supabase
-        .from("conversations").select("mission_id").eq("id", conversationId).single();
-      resolvedMissionId = convo?.mission_id;
+        .from("conversations").select("mission_id").eq("id", conversationId).eq("user_id", user.id).maybeSingle();
+      if (!convo) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      resolvedMissionId = convo.mission_id;
     }
     if (resolvedMissionId) {
-      const { data: m } = await supabase.from("missions").select("target").eq("id", resolvedMissionId).single();
-      missionTarget = m?.target;
+      const { data: m } = await supabase.from("missions").select("target").eq("id", resolvedMissionId).eq("user_id", user.id).maybeSingle();
+      if (!m) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      missionTarget = m.target;
     }
 
     let sessionId: string | null = null;
