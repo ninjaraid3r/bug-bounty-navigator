@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Terminal, Loader2, RotateCcw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ToolSandboxProps {
   toolName: string;
