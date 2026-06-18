@@ -9,7 +9,6 @@ interface Finding {
   title: string;
   severity: string | null;
   description: string | null;
-  agent_codename: string | null;
   created_at: string;
 }
 
@@ -23,7 +22,7 @@ export default function Learnings() {
     (async () => {
       const { data } = await supabase
         .from("findings")
-        .select("id, title, severity, description, agent_codename, created_at")
+        .select("id, title, severity, description, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -50,7 +49,7 @@ export default function Learnings() {
               <span className={`text-[10px] font-mono uppercase ${sevColor(it.severity)}`}>{it.severity ?? "info"}</span>
             </div>
             {it.description && <div className="text-[11px] text-muted-foreground mb-1 line-clamp-2">{it.description}</div>}
-            <div className="text-[10px] font-mono text-muted-foreground">{it.agent_codename ?? "system"} · {new Date(it.created_at).toLocaleString()}</div>
+            <div className="text-[10px] font-mono text-muted-foreground">{new Date(it.created_at).toLocaleString()}</div>
           </div>
         ))}
       </div>
