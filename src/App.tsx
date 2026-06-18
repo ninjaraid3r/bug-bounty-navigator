@@ -21,6 +21,7 @@ import AgentProfile from "./pages/AgentProfile";
 import CommanderSessions from "./pages/CommanderSessions";
 import SessionDetail from "./pages/SessionDetail";
 import SkillApprovalQueue from "./pages/SkillApprovalQueue";
+import Shell from "./components/Shell";
 
 const queryClient = new QueryClient();
 
@@ -39,22 +40,24 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => (
   <AuthGate>
     <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/second-brain" element={<SecondBrain />} />
-      <Route path="/bounty" element={<Bounty />} />
-      <Route path="/attack-surface" element={<AttackSurface />} />
-      <Route path="/exploit-lab" element={<ExploitLab />} />
-      <Route path="/vuln-scanner" element={<VulnScanner />} />
-      <Route path="/payload-forge" element={<PayloadForge />} />
-      <Route path="/network-map" element={<NetworkMap />} />
-      <Route path="/targets" element={<Targets />} />
-      <Route path="/reports" element={<Reports />} />
-      <Route path="/automation" element={<Automation />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="/agents/:codename" element={<AgentProfile />} />
-      <Route path="/commander/sessions" element={<CommanderSessions />} />
-      <Route path="/commander/sessions/:id" element={<SessionDetail />} />
-      <Route path="/skills/pending" element={<SkillApprovalQueue />} />
+      <Route element={<Shell />}>
+        <Route path="/" element={<Index />} />
+        <Route path="/second-brain" element={<SecondBrain />} />
+        <Route path="/bounty" element={<Bounty />} />
+        <Route path="/attack-surface" element={<AttackSurface />} />
+        <Route path="/exploit-lab" element={<ExploitLab />} />
+        <Route path="/vuln-scanner" element={<VulnScanner />} />
+        <Route path="/payload-forge" element={<PayloadForge />} />
+        <Route path="/network-map" element={<NetworkMap />} />
+        <Route path="/targets" element={<Targets />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/automation" element={<Automation />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/agents/:codename" element={<AgentProfile />} />
+        <Route path="/commander/sessions" element={<CommanderSessions />} />
+        <Route path="/commander/sessions/:id" element={<SessionDetail />} />
+        <Route path="/skills/pending" element={<SkillApprovalQueue />} />
+      </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
   </AuthGate>
