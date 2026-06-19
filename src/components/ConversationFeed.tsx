@@ -223,6 +223,38 @@ export default function ConversationFeed() {
     await refresh();
   }
 
+  async function endSessionOverview() {
+    if (ending || !conversation?.id) return;
+    // Collect active agents from localStorage (Leads + dynamic) + Commander
+    let activeLeads: string[] = [];
+    try {
+      const raw = localStorage.getItem("liq.activeLeads");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) activeLeads = parsed.map((s) => String(s).toUpperCase());
+      }
+    } catch { /* ignore */ }
+    // Default: all base leads if nothing toggled
+    if (!activeLeads.length) activeLeads = ["PHANTOM", "VIPER", "SPECTER", "CARTOGRAPHER"];
+    const codenames = ["COMMANDER", ...activeLeads];
+
+    setEnding(true);
+    toast({ title: "Generating overviews", description: `${codenames.length} agents writing end-of-session summaries…` });
+    try {
+      const { data, error } = await supabase.functions.invoke("lead-session-overview", {
+        body: { conversationId: conversation.id, missionId: mission?.id, agentCodenames: codenames },
+      });
+      if (error) throw error;
+      const oks = (data?.perAgent || []).filter((a: any) => a.ok).length;
+      toast({ title: "Overviews complete", description: `${oks}/${codenames.length} agents saved. Open the Agents tab to review.` });
+      await refresh();
+    } catch (e: any) {
+      toast({ title: "End session failed", description: e?.message || "Unknown error", variant: "destructive" });
+    } finally {
+      setEnding(false);
+    }
+  }
+
   if (missionLoading || msgLoading) {
     return (
       <div className="flex items-center justify-center h-full bg-background">
