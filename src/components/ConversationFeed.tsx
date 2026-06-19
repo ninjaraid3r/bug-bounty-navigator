@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search,
-  ShieldAlert, Mail, Target, Check, X, Pencil, Trash2, CheckSquare, Square, Save, PhoneCall,
+  ShieldAlert, Mail, Target, Check, X, Pencil, Trash2, CheckSquare, Square, Save, PhoneCall, FileCheck,
 } from "lucide-react";
 import { useMission, useMessages } from "@/hooks/useMission";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +49,7 @@ export default function ConversationFeed() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
+  const [ending, setEnding] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -220,6 +221,38 @@ export default function ConversationFeed() {
     setEditingMsgId(null);
     setEditDraft("");
     await refresh();
+  }
+
+  async function endSessionOverview() {
+    if (ending || !conversation?.id) return;
+    // Collect active agents from localStorage (Leads + dynamic) + Commander
+    let activeLeads: string[] = [];
+    try {
+      const raw = localStorage.getItem("liq.activeLeads");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) activeLeads = parsed.map((s) => String(s).toUpperCase());
+      }
+    } catch { /* ignore */ }
+    // Default: all base leads if nothing toggled
+    if (!activeLeads.length) activeLeads = ["PHANTOM", "VIPER", "SPECTER", "CARTOGRAPHER"];
+    const codenames = ["COMMANDER", ...activeLeads];
+
+    setEnding(true);
+    toast({ title: "Generating overviews", description: `${codenames.length} agents writing end-of-session summaries…` });
+    try {
+      const { data, error } = await supabase.functions.invoke("lead-session-overview", {
+        body: { conversationId: conversation.id, missionId: mission?.id, agentCodenames: codenames },
+      });
+      if (error) throw error;
+      const oks = (data?.perAgent || []).filter((a: any) => a.ok).length;
+      toast({ title: "Overviews complete", description: `${oks}/${codenames.length} agents saved. Open the Agents tab to review.` });
+      await refresh();
+    } catch (e: any) {
+      toast({ title: "End session failed", description: e?.message || "Unknown error", variant: "destructive" });
+    } finally {
+      setEnding(false);
+    }
   }
 
   if (missionLoading || msgLoading) {
@@ -395,6 +428,16 @@ export default function ConversationFeed() {
               Call All Recommended
             </button>
           )}
+          <div className="flex-1" />
+          <button
+            onClick={endSessionOverview}
+            disabled={ending || !!agentsThinking}
+            title="Have Commander + active Leads each write an end-of-session overview (saved to Agents tab)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono bg-surface-2 border border-primary/40 text-primary hover:bg-primary/15 hover:neon-gold-box transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {ending ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileCheck className="w-3 h-3" />}
+            {ending ? "Generating…" : "End Session — Generate Overviews"}
+          </button>
         </div>
       </div>
 

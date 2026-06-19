@@ -1,102 +1,80 @@
-# Plan v2: Cartographer Lead + Mind-Map Memory + Skill Approval
+## 1. Fix the page-flicker bug
 
-## Part 1 — New Lead: CARTOGRAPHER (Recon Mapper)
+Root cause: every page mounts its own `LeftSidebar`, so on navigation the sidebar unmounts/remounts and replays its framer-motion entry animation (opacity + width tween). The flash you see is the sidebar re-animating in.
 
-A 4th base Lead specialized in **attack-surface mapping**. Wields verified industry tools:
-subfinder, amass, assetfinder, findomain, chaos, github-subdomains, dnsx, puredns, massdns, shuffledns, httpx, katana, gau, waybackurls, hakrawler, gowitness, crt.sh, dnsdumpster, cloud_enum, s3scanner, GCPBucketBrute, ffuf, dirsearch, feroxbuster, arjun, paramspider, shodan, fofa, censys, zoomeye.
+Fix (option 1 from chat): introduce a single `<AppShell>` route wrapper in `src/App.tsx` that renders `LeftSidebar` once and an `<Outlet />` for the page. All routes that currently embed `LeftSidebar` themselves (Index, AppLayout-based pages, AgentProfile, etc.) get the sidebar removed from their own JSX. Result: sidebar mounts exactly once, navigation = pure outlet swap, no flicker.
 
-System prompt instructs Cartographer to:
-1. Respond conversationally with the recon plan/findings.
-2. Emit a fenced ` ```mindmap` JSON block with `{ target, nodes:[{key,parent,label,type,note}], edges:[], summary, tips:[], killchain:[] }`.
-3. `tips` = ranked exploit/bug-hunt areas of interest with rationale.
-4. `killchain` = ordered kill-chain test stages tied to findings (Recon → Weaponize → Deliver → Exploit → Persist → Exfil) with recommended tools per stage.
+Also: `AuthGate` stays at the top so the loader doesn't run per-route.
 
-**Files**
-- `supabase/functions/mission-chat/index.ts` — append CARTOGRAPHER to `AGENT_CHAIN`. After response, parse the mindmap block and upsert into `recon_maps` + `recon_map_nodes` (mission + session scoped, dedup by `node_key`). Persist `tips` and `killchain` JSON onto the `recon_maps` row.
-- `src/components/RightSidebar.tsx` — add CARTOGRAPHER chip with toggle.
-- `src/components/ConversationFeed.tsx` — include in enabled/disabled list.
+## 2. New Agents hub
 
-## Part 2 — Cartographer Memory UI (lives in AgentProfile)
+New routes:
 
-When user opens `/agents/cartographer`, the Memory tab gets a new **"Recon Maps"** section (in addition to existing learnings/handoffs):
-
-```
-┌─ Recon Maps ───────────────────────────────────┐
-│ Table: Target | Session | Nodes | Updated | ⋯  │
-│  ▸ api.acme.com   2026-05-12   42  [Open]     │
-│  ▸ shop.foo.io    2026-05-10   17  [Open]     │
-└────────────────────────────────────────────────┘
+```text
+/agents                 → Agents hub (cards for Commander, Leads, Raiders)
+/agents/commander       → Commander page (personas, memory, orchestrator)
+/agents/leads           → Leads index + per-Lead drill-in
+/agents/leads/:codename → Lead detail (Phantom / Viper / Specter / Cartographer)
+/agents/raiders         → Raiders index + per-Raider drill-in
+/agents/raiders/:codename
 ```
 
-Click a row → opens a detail view (modal or inline panel) with:
-- **Mind-map canvas** rendered with `@xyflow/react` (radial layout, gold-on-dark, color-coded by node type).
-- **Professional Summary** block below: target, scope, asset counts by type, key risks, generated `summary` paragraph.
-- Two action buttons next to the title:
-  - **TIPS** → opens drawer listing Cartographer's recommended areas of interest, each with severity chip + rationale + suggested next test.
-  - **KILL-CHAIN** → opens drawer listing the recommended kill-chain stages with tools per stage and which finding triggered each.
+Each agent detail page has these sections, all populated from DB:
 
-**Persistence guarantee**: `recon_maps` and `recon_map_nodes` have **no delete RLS policy** (only insert/select/update). They cannot be deleted from the UI — explicit design choice per your instruction. (Service role can still purge if ever needed.)
+- **High / Medium / Low Learnings** (color-coded columns, filter by session)
+- **Memory Summaries** (one card per session, agent-authored)
+- **Agent Opinions** (free-form notes the agent adds from its specialty)
+- **Recommended Workflows / Automations**
+- **Recommended skill.md files** → "Promote to Skills tab" button writes into existing skill approval queue
 
-**Files**
-- `src/components/ReconMindMap.tsx` — react-flow canvas, read-only, fits to view, export-PNG button.
-- `src/components/ReconMapDetail.tsx` — visual + summary + TIPS / KILL-CHAIN buttons + drawers.
-- `src/pages/AgentProfile.tsx` — when codename is CARTOGRAPHER show the Recon Maps table; clicking a row mounts `ReconMapDetail`.
+The Agents hub replaces nothing in this pass — we just add it. (Tab cleanup is queued for a follow-up so we don't blow up routes while we're stabilizing the flicker fix.)
 
-## Part 3 — Skill Approval Queue
+## 3. End-of-Session Overview button (Recon tab)
 
-AI-extracted automations from `lead-review` and `pass-to-lead` currently insert as `status='approved'`. Change to `status='pending'`, add a queue.
+In the Recon page (`src/pages/Index.tsx` / `ConversationFeed`), add a button under the active-Leads area: **"End Session — Generate Overviews"**. Clicking it calls a new edge function `lead-session-overview` that, for every Lead/Raider currently flagged active in the session:
 
-- **Edge function changes**: both functions insert with `status: 'pending'`.
-- **AgentProfile**: new "Pending Skills" section per lead with inline edit + Approve / Reject / Edit-and-approve.
-- **New page** `src/pages/SkillApprovalQueue.tsx` at `/skills/pending` — global view across all leads, badge in left sidebar showing pending count.
+1. Pulls that agent's messages + tasks from the session
+2. Asks the model to emit a structured JSON: `{summary, high[], medium[], low[], opinions[], recommended_skills[], recommended_workflows[]}`
+3. Writes rows into the new `agent_learnings`, `agent_memory`, `agent_opinions`, `agent_recommendations` tables
+4. Posts a short summary message back into the conversation as the agent
 
-## Part 4 — Database Migration
+Button shows progress per agent and links to `/agents/<role>/<codename>` when each finishes.
 
-```sql
--- Recon maps (one per session/target)
-create table public.recon_maps (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
-  mission_id uuid not null,
-  session_id uuid,
-  target text not null,
-  summary text,
-  tips jsonb not null default '[]',
-  killchain jsonb not null default '[]',
-  node_count int not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+## 4. Visual refresh (Settings, Targets, Sessions, Agents)
 
--- Mind-map nodes
-create table public.recon_map_nodes (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
-  map_id uuid not null,
-  node_key text not null,
-  parent_key text,
-  label text not null,
-  node_type text not null,  -- root|domain|subdomain|ip|endpoint|bucket|panel|tech|note
-  metadata jsonb not null default '{}',
-  created_at timestamptz not null default now(),
-  unique (map_id, node_key)
-);
+Single cohesive pass keeping the existing dark + gold-neon system. No new color palette, just richer layouts:
 
--- RLS: SELECT + INSERT + UPDATE only. NO DELETE policy = recon memory is permanent.
-alter table public.recon_maps enable row level security;
-alter table public.recon_map_nodes enable row level security;
--- (owner policies for select/insert/update on both)
+- **Settings**: split into sectioned cards (Profile, Workspace, Agents, Skills, Danger Zone) with neon-bordered group headers, JetBrains Mono labels, tabbed sub-nav.
+- **Targets**: hero header with target chip + impact badge, two-column grid (metadata left, embedded Recon graph/canvas right with the existing toggle), expandable node list under.
+- **Sessions / Session Detail**: timeline rail on the left, transcript/findings tabs on the right, agent-grade chips, status pill with neon glow.
+- **Agents pages**: hero card per agent (codename, role, status dot, active toggle), then the four sections from §2 as horizontally-scrollable shelves with neon dividers.
 
--- Realtime + index for approval queue
-alter publication supabase_realtime add table public.recon_map_nodes;
-create index automations_status_idx on public.automations (user_id, status);
-```
+No font changes (keeps JetBrains Mono / Inter).
 
-## Part 5 — Dependencies
-- `bun add @xyflow/react`
+## 5. Database additions
 
-## Out of scope this round
-- Manual editing of mind-map nodes (read-only; only Cartographer writes).
-- Real tool execution (Cartographer still simulates; live execution would need a separate compute backend).
+One migration adds:
 
-After approval I'll run the migration first, then ship code.
+- `agent_learnings(user_id, mission_id, session_id, agent_codename, level, title, body)` — level enum: high/medium/low
+- `agent_memory(user_id, mission_id, session_id, agent_codename, summary)`
+- `agent_opinions(user_id, agent_codename, topic, body)`
+- `agent_recommendations(user_id, agent_codename, kind, title, body, status)` — kind: workflow/automation/skill, status: pending/promoted/rejected
+
+All RLS-locked to `user_id = auth.uid()`, with GRANTs to `authenticated` + `service_role`.
+
+## 6. New edge function
+
+`lead-session-overview` — auth-required, ownership-checked (same pattern as `mission-chat`). Iterates active agents in the session, calls Lovable AI per agent, inserts rows into the four new tables, returns a per-agent summary array.
+
+## 7. Order of work
+
+1. Migration (§5) — needs approval before code reads new tables.
+2. Persistent-layout flicker fix (§1).
+3. Agents hub routes + pages (§2) wired to the new tables (empty states until §3 runs).
+4. `lead-session-overview` edge function (§6) + Recon button (§3).
+5. Visual refresh pass (§4).
+
+## Out of scope this pass
+
+- Deleting/consolidating existing sidebar tabs (Attack Surface, Vuln Scanner, etc.) — covered in the earlier restructure plan, will do after this stabilizes.
+- Exporting agent-recommended skills as on-disk `.md` files — for now they land in the existing Skill Approval Queue as DB rows; filesystem export is a follow-up.
