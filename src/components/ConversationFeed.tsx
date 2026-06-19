@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search,
-  ShieldAlert, Mail, Target, Check, X, Pencil, Trash2, CheckSquare, Square, Save, PhoneCall,
+  ShieldAlert, Mail, Target, Check, X, Pencil, Trash2, CheckSquare, Square, Save, PhoneCall, FileCheck,
 } from "lucide-react";
 import { useMission, useMessages } from "@/hooks/useMission";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +49,7 @@ export default function ConversationFeed() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
+  const [ending, setEnding] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
