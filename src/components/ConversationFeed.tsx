@@ -428,6 +428,16 @@ export default function ConversationFeed() {
               Call All Recommended
             </button>
           )}
+          <div className="flex-1" />
+          <button
+            onClick={endSessionOverview}
+            disabled={ending || !!agentsThinking}
+            title="Have Commander + active Leads each write an end-of-session overview (saved to Agents tab)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono bg-surface-2 border border-primary/40 text-primary hover:bg-primary/15 hover:neon-gold-box transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {ending ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileCheck className="w-3 h-3" />}
+            {ending ? "Generating…" : "End Session — Generate Overviews"}
+          </button>
         </div>
       </div>
 
