@@ -1,18 +1,22 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  ChevronLeft, ChevronRight, Radar, Crosshair, Settings, BookOpen,
-  ShieldCheck, Star, Users, Swords, History,
+  ChevronLeft, ChevronRight, Radar, Globe, Shield, Bug, Terminal,
+  Network, Crosshair, FileSearch, Settings, Zap, BookOpen, DollarSign, ShieldCheck,
 } from "lucide-react";
 
 const navItems = [
-  { icon: Radar, label: "Command Center", path: "/" },
-  { icon: Star, label: "Commander", path: "/commander" },
-  { icon: Users, label: "Leads", path: "/leads" },
-  { icon: Swords, label: "Raiders", path: "/raiders" },
+  { icon: Radar, label: "Recon", path: "/" },
+  { icon: BookOpen, label: "Second Brain", path: "/second-brain" },
+  { icon: DollarSign, label: "Bounty", path: "/bounty" },
+  { icon: Globe, label: "Attack Surface", path: "/attack-surface" },
+  { icon: Shield, label: "Exploit Lab", path: "/exploit-lab" },
+  { icon: Bug, label: "Vuln Scanner", path: "/vuln-scanner" },
+  { icon: Terminal, label: "Payload Forge", path: "/payload-forge" },
+  { icon: Network, label: "Network Map", path: "/network-map" },
   { icon: Crosshair, label: "Targets", path: "/targets" },
-  { icon: BookOpen, label: "Learnings", path: "/learnings" },
-  { icon: History, label: "Sessions", path: "/commander/sessions" },
+  { icon: FileSearch, label: "Reports", path: "/reports" },
+  { icon: Zap, label: "Automation", path: "/automation" },
   { icon: ShieldCheck, label: "Skill Queue", path: "/skills/pending" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
