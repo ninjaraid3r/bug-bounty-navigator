@@ -14,6 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_learnings: {
+        Row: {
+          agent_codename: string
+          body: string | null
+          created_at: string
+          id: string
+          level: Database["public"]["Enums"]["learning_level"]
+          mission_id: string | null
+          session_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_codename: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          level: Database["public"]["Enums"]["learning_level"]
+          mission_id?: string | null
+          session_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_codename?: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["learning_level"]
+          mission_id?: string | null
+          session_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_memory: {
+        Row: {
+          agent_codename: string
+          created_at: string
+          id: string
+          mission_id: string | null
+          session_id: string | null
+          summary: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_codename: string
+          created_at?: string
+          id?: string
+          mission_id?: string | null
+          session_id?: string | null
+          summary: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_codename?: string
+          created_at?: string
+          id?: string
+          mission_id?: string | null
+          session_id?: string | null
+          summary?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_opinions: {
+        Row: {
+          agent_codename: string
+          body: string
+          created_at: string
+          id: string
+          session_id: string | null
+          topic: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_codename: string
+          body: string
+          created_at?: string
+          id?: string
+          session_id?: string | null
+          topic?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_codename?: string
+          body?: string
+          created_at?: string
+          id?: string
+          session_id?: string | null
+          topic?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_recommendations: {
+        Row: {
+          agent_codename: string
+          body: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["recommendation_kind"]
+          session_id: string | null
+          status: Database["public"]["Enums"]["recommendation_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_codename: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["recommendation_kind"]
+          session_id?: string | null
+          status?: Database["public"]["Enums"]["recommendation_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_codename?: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["recommendation_kind"]
+          session_id?: string | null
+          status?: Database["public"]["Enums"]["recommendation_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agent_tasks: {
         Row: {
           agent_codename: string
@@ -627,6 +771,7 @@ export type Database = {
       agent_status: "active" | "idle" | "working" | "offline"
       agent_type: "manager" | "lead" | "raider"
       finding_severity: "info" | "low" | "medium" | "high" | "critical"
+      learning_level: "high" | "medium" | "low"
       message_role: "user" | "manager" | "lead" | "raider"
       mission_status:
         | "planning"
@@ -634,6 +779,8 @@ export type Database = {
         | "paused"
         | "completed"
         | "archived"
+      recommendation_kind: "workflow" | "automation" | "skill"
+      recommendation_status: "pending" | "promoted" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -764,8 +911,11 @@ export const Constants = {
       agent_status: ["active", "idle", "working", "offline"],
       agent_type: ["manager", "lead", "raider"],
       finding_severity: ["info", "low", "medium", "high", "critical"],
+      learning_level: ["high", "medium", "low"],
       message_role: ["user", "manager", "lead", "raider"],
       mission_status: ["planning", "active", "paused", "completed", "archived"],
+      recommendation_kind: ["workflow", "automation", "skill"],
+      recommendation_status: ["pending", "promoted", "rejected"],
     },
   },
 } as const
