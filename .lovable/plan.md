@@ -1,80 +1,62 @@
-## 1. Fix the page-flicker bug
+## 0. Smoke test first
+- Open the preview and walk these routes to confirm no runtime errors after the recent AppShell/Agents refactor: `/`, `/agents`, `/agents/tier/leads`, `/commander/sessions`, `/targets`, `/settings`, `/skills/pending`.
+- Verify the flicker fix still holds and the new agent_* tables read cleanly.
+- Capture any breakage and fix before starting the consolidation work below.
 
-Root cause: every page mounts its own `LeftSidebar`, so on navigation the sidebar unmounts/remounts and replays its framer-motion entry animation (opacity + width tween). The flash you see is the sidebar re-animating in.
+## 1. Tab consolidation
 
-Fix (option 1 from chat): introduce a single `<AppShell>` route wrapper in `src/App.tsx` that renders `LeftSidebar` once and an `<Outlet />` for the page. All routes that currently embed `LeftSidebar` themselves (Index, AppLayout-based pages, AgentProfile, etc.) get the sidebar removed from their own JSX. Result: sidebar mounts exactly once, navigation = pure outlet swap, no flicker.
+### A. New "Offensive Ops" tab (`/offensive-ops`)
+Merges: Exploit Lab + Vuln Scanner + Automation + Payload Forge.
+- Single page with 4 sub-sections rendered as a vertical stack of **expandable hero cards** (click to expand → reveals full toolset for that section, click again to collapse). Only one open at a time.
+  - Exploit Lab — PoC runner, recent exploit attempts, success rate ring.
+  - Vuln Scanner — scan queue, severity histogram, last-scan delta.
+  - Automation — pipelines, schedule heatmap, run history.
+  - Payload Forge — category grid, copy-to-clipboard, "send to Exploit Lab" handoff.
+- Collapsed state shows a metric strip (count, last-run, status pulse). Expanded state shows the full tool surface plus a new "Innovations" mini-panel suggesting next-step automations derived from the data already present (no new business logic — purely UI surfacing what the table already holds).
+- Remove old sidebar entries for Exploit Lab, Vuln Scanner, Automation, Payload Forge; keep routes redirecting to `/offensive-ops` so old links don't 404.
 
-Also: `AuthGate` stays at the top so the loader doesn't run per-route.
+### B. New "Intel Map" tab (`/intel-map`)
+Merges: Targets + Reports + Network Map.
+- Top hero: live Network Map canvas (existing component) full-bleed.
+- Below: two expandable card columns — **Targets** (asset list, status, scope) and **Reports** (PDF/MD findings, severity breakdown). Each card click-to-expand into a rich detail drawer with metrics: open findings per target, last-touched, related recon nodes.
+- Innovations strip: "Auto-correlate findings to targets", "Generate exec report from selected nodes" — UI surfaces only, wired to existing endpoints where they exist.
+- Sidebar removes Targets / Reports / Network Map; routes redirect to `/intel-map`.
 
-## 2. New Agents hub
+## 2. New "Data Vault" tab (`/data-vault`)
+Single source of truth for what graduates into the knowledge base.
+- Pulls from `agent_learnings`, `agent_memory`, `agent_opinions`, `agent_recommendations`, plus findings + session summaries.
+- Three columns: **Pending** | **Confirmed** | **Rejected**. Each row is a clickable card → drawer with source agent, session link, raw text, metadata.
+- Bulk select + Confirm/Reject buttons. Confirm flips a new `status` column (`pending|confirmed|rejected`) on the source row; confirmed items are what the rest of the platform treats as canonical.
+- Migration: add nullable `vault_status text default 'pending'` to the four agent_* tables + `findings`. Backfill existing rows to `pending`. RLS unchanged (user-scoped).
 
-New routes:
+## 3. Settings expansion
+Keep all current toggles; add a second column of cards:
+- **AGENT DEFAULTS** — default Lead persona, auto-spawn raiders on new session, max concurrent raiders (slider).
+- **DATA VAULT** — auto-confirm High learnings, auto-reject Low after N days, require commander sign-off.
+- **NOTIFICATIONS+** — session-end summary, new persona added, skill approved.
+- **INTERFACE** — sidebar collapsed by default, reduce motion, compact density.
+- **INTEGRATIONS** — placeholders (disabled toggles) for HackerOne / Bugcrowd / Slack webhook URLs (text inputs, persisted to localStorage only for now).
+All new state persists to localStorage; no schema change required.
 
-```text
-/agents                 → Agents hub (cards for Commander, Leads, Raiders)
-/agents/commander       → Commander page (personas, memory, orchestrator)
-/agents/leads           → Leads index + per-Lead drill-in
-/agents/leads/:codename → Lead detail (Phantom / Viper / Specter / Cartographer)
-/agents/raiders         → Raiders index + per-Raider drill-in
-/agents/raiders/:codename
-```
+## 4. Commander Personas (RightSidebar)
+- Add a **Personas** button on the Commander card in the right sidebar.
+- Clicking opens a dialog/sheet showing:
+  - Current active persona (highlighted) with description.
+  - Library of template personas (seeded list of 4-6: Strategist, Red-Team Lead, Bug-Bounty Hunter, Stealth Operator, Teacher, Auditor).
+  - Per-row Edit / Delete buttons; top-level "Add new persona from template" → form (name, role, system prompt).
+- Selecting a persona sets it active; the persona **name** then renders inline on the Commander card under the role line (e.g. "Manager Agent · STRATEGIST").
+- Storage: new `commander_personas` table (id, user_id, name, description, system_prompt, is_active, created_at). RLS user-scoped, GRANTs to authenticated + service_role. Only one `is_active=true` per user enforced client-side on save.
 
-Each agent detail page has these sections, all populated from DB:
-
-- **High / Medium / Low Learnings** (color-coded columns, filter by session)
-- **Memory Summaries** (one card per session, agent-authored)
-- **Agent Opinions** (free-form notes the agent adds from its specialty)
-- **Recommended Workflows / Automations**
-- **Recommended skill.md files** → "Promote to Skills tab" button writes into existing skill approval queue
-
-The Agents hub replaces nothing in this pass — we just add it. (Tab cleanup is queued for a follow-up so we don't blow up routes while we're stabilizing the flicker fix.)
-
-## 3. End-of-Session Overview button (Recon tab)
-
-In the Recon page (`src/pages/Index.tsx` / `ConversationFeed`), add a button under the active-Leads area: **"End Session — Generate Overviews"**. Clicking it calls a new edge function `lead-session-overview` that, for every Lead/Raider currently flagged active in the session:
-
-1. Pulls that agent's messages + tasks from the session
-2. Asks the model to emit a structured JSON: `{summary, high[], medium[], low[], opinions[], recommended_skills[], recommended_workflows[]}`
-3. Writes rows into the new `agent_learnings`, `agent_memory`, `agent_opinions`, `agent_recommendations` tables
-4. Posts a short summary message back into the conversation as the agent
-
-Button shows progress per agent and links to `/agents/<role>/<codename>` when each finishes.
-
-## 4. Visual refresh (Settings, Targets, Sessions, Agents)
-
-Single cohesive pass keeping the existing dark + gold-neon system. No new color palette, just richer layouts:
-
-- **Settings**: split into sectioned cards (Profile, Workspace, Agents, Skills, Danger Zone) with neon-bordered group headers, JetBrains Mono labels, tabbed sub-nav.
-- **Targets**: hero header with target chip + impact badge, two-column grid (metadata left, embedded Recon graph/canvas right with the existing toggle), expandable node list under.
-- **Sessions / Session Detail**: timeline rail on the left, transcript/findings tabs on the right, agent-grade chips, status pill with neon glow.
-- **Agents pages**: hero card per agent (codename, role, status dot, active toggle), then the four sections from §2 as horizontally-scrollable shelves with neon dividers.
-
-No font changes (keeps JetBrains Mono / Inter).
-
-## 5. Database additions
-
-One migration adds:
-
-- `agent_learnings(user_id, mission_id, session_id, agent_codename, level, title, body)` — level enum: high/medium/low
-- `agent_memory(user_id, mission_id, session_id, agent_codename, summary)`
-- `agent_opinions(user_id, agent_codename, topic, body)`
-- `agent_recommendations(user_id, agent_codename, kind, title, body, status)` — kind: workflow/automation/skill, status: pending/promoted/rejected
-
-All RLS-locked to `user_id = auth.uid()`, with GRANTs to `authenticated` + `service_role`.
-
-## 6. New edge function
-
-`lead-session-overview` — auth-required, ownership-checked (same pattern as `mission-chat`). Iterates active agents in the session, calls Lovable AI per agent, inserts rows into the four new tables, returns a per-agent summary array.
-
-## 7. Order of work
-
-1. Migration (§5) — needs approval before code reads new tables.
-2. Persistent-layout flicker fix (§1).
-3. Agents hub routes + pages (§2) wired to the new tables (empty states until §3 runs).
-4. `lead-session-overview` edge function (§6) + Recon button (§3).
-5. Visual refresh pass (§4).
+## 5. Order of operations
+1. Smoke test → fix any breakage.
+2. Migration: vault_status columns + commander_personas table.
+3. Build `/offensive-ops` and `/intel-map`, add redirects, update LeftSidebar.
+4. Build `/data-vault`.
+5. Extend Settings.
+6. Build Personas card + dialog in RightSidebar, wire to commander_personas.
+7. Final preview pass on every route.
 
 ## Out of scope this pass
-
-- Deleting/consolidating existing sidebar tabs (Attack Surface, Vuln Scanner, etc.) — covered in the earlier restructure plan, will do after this stabilizes.
-- Exporting agent-recommended skills as on-disk `.md` files — for now they land in the existing Skill Approval Queue as DB rows; filesystem export is a follow-up.
+- Filesystem `.md` export of skills (still DB-only).
+- Real HackerOne/Bugcrowd integrations (UI shells only).
+- AI auto-grading of vault items (manual confirm/reject only).
