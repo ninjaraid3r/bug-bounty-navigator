@@ -13,7 +13,11 @@ import {
   X,
   Check,
   Power,
+  UserCog,
 } from "lucide-react";
+import PersonasDialog from "./PersonasDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Agent {
   name: string;
