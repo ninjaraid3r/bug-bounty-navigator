@@ -432,6 +432,12 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
           </motion.div>
         )}
       </AnimatePresence>
+
+      <PersonasDialog
+        open={showPersonas}
+        onClose={() => setShowPersonas(false)}
+        onActiveChange={setActivePersona}
+      />
     </motion.aside>
   );
 }
