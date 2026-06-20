@@ -249,16 +249,29 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
                 </div>
                 <div className="space-y-1">
                   {baseAgents.filter(a => a.type === "manager").map(agent => (
-                    <AgentCard key={agent.name} agent={agent} onClick={() => navigate(`/agents/${agent.name.toLowerCase()}`)} />
+                    <AgentCard
+                      key={agent.name}
+                      agent={{ ...agent, role: activePersona ? `${agent.role} · ${activePersona}` : agent.role }}
+                      onClick={() => navigate(`/agents/${agent.name.toLowerCase()}`)}
+                    />
                   ))}
                 </div>
-                <button
-                  onClick={() => navigate("/commander/sessions")}
-                  className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md bg-primary/10 border border-primary/30 hover:border-primary text-primary text-[10px] font-mono uppercase tracking-widest transition-colors"
-                >
-                  <FileText className="w-3 h-3" />
-                  Session Reports
-                </button>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => setShowPersonas(true)}
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-primary/10 border border-primary/30 hover:border-primary text-primary text-[10px] font-mono uppercase tracking-widest transition-colors"
+                  >
+                    <UserCog className="w-3 h-3" />
+                    Personas
+                  </button>
+                  <button
+                    onClick={() => navigate("/commander/sessions")}
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-primary/10 border border-primary/30 hover:border-primary text-primary text-[10px] font-mono uppercase tracking-widest transition-colors"
+                  >
+                    <FileText className="w-3 h-3" />
+                    Sessions
+                  </button>
+                </div>
               </div>
 
               {/* Leads */}
