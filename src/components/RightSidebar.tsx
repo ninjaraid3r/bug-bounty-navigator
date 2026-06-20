@@ -119,8 +119,11 @@ const BASE_LEAD_NAMES = baseAgents.filter(a => a.type === "lead").map(a => a.nam
 
 export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [extraLeads, setExtraLeads] = useState<Agent[]>([]);
   const [showAddLead, setShowAddLead] = useState(false);
+  const [showPersonas, setShowPersonas] = useState(false);
+  const [activePersona, setActivePersona] = useState<string | null>(null);
   const [toggles, setToggles] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -133,6 +136,17 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
       if (raw) setToggles(JSON.parse(raw));
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    (supabase as any)
+      .from("commander_personas")
+      .select("name,is_active")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle()
+      .then(({ data }: any) => setActivePersona(data?.name ?? null));
+  }, [user, showPersonas]);
 
   const persistLeads = (next: Agent[]) => {
     setExtraLeads(next);
