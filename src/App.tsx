@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,13 +9,9 @@ import Index from "./pages/Index";
 import SecondBrain from "./pages/SecondBrain";
 import AttackSurface from "./pages/AttackSurface";
 import Bounty from "./pages/Bounty";
-import ExploitLab from "./pages/ExploitLab";
-import VulnScanner from "./pages/VulnScanner";
-import PayloadForge from "./pages/PayloadForge";
-import NetworkMap from "./pages/NetworkMap";
-import Targets from "./pages/Targets";
-import Reports from "./pages/Reports";
-import Automation from "./pages/Automation";
+import OffensiveOps from "./pages/OffensiveOps";
+import IntelMap from "./pages/IntelMap";
+import DataVault from "./pages/DataVault";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import AgentProfile from "./pages/AgentProfile";
@@ -42,19 +38,26 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => (
   <AuthGate>
     <Routes>
-      {/* Persistent shell — LeftSidebar mounts once here, fixing nav flicker. */}
       <Route element={<AppShell />}>
         <Route path="/" element={<Index />} />
         <Route path="/second-brain" element={<SecondBrain />} />
         <Route path="/bounty" element={<Bounty />} />
         <Route path="/attack-surface" element={<AttackSurface />} />
-        <Route path="/exploit-lab" element={<ExploitLab />} />
-        <Route path="/vuln-scanner" element={<VulnScanner />} />
-        <Route path="/payload-forge" element={<PayloadForge />} />
-        <Route path="/network-map" element={<NetworkMap />} />
-        <Route path="/targets" element={<Targets />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/automation" element={<Automation />} />
+
+        {/* New unified tabs */}
+        <Route path="/offensive-ops" element={<OffensiveOps />} />
+        <Route path="/intel-map" element={<IntelMap />} />
+        <Route path="/data-vault" element={<DataVault />} />
+
+        {/* Redirects from the merged tabs */}
+        <Route path="/exploit-lab" element={<Navigate to="/offensive-ops" replace />} />
+        <Route path="/vuln-scanner" element={<Navigate to="/offensive-ops" replace />} />
+        <Route path="/payload-forge" element={<Navigate to="/offensive-ops" replace />} />
+        <Route path="/automation" element={<Navigate to="/offensive-ops" replace />} />
+        <Route path="/targets" element={<Navigate to="/intel-map" replace />} />
+        <Route path="/reports" element={<Navigate to="/intel-map" replace />} />
+        <Route path="/network-map" element={<Navigate to="/intel-map" replace />} />
+
         <Route path="/settings" element={<Settings />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/agents/tier/:tier" element={<AgentsTier />} />
