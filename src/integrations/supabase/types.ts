@@ -26,6 +26,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          vault_status: string
         }
         Insert: {
           agent_codename: string
@@ -38,6 +39,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          vault_status?: string
         }
         Update: {
           agent_codename?: string
@@ -50,6 +52,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          vault_status?: string
         }
         Relationships: []
       }
@@ -63,6 +66,7 @@ export type Database = {
           summary: string
           updated_at: string
           user_id: string
+          vault_status: string
         }
         Insert: {
           agent_codename: string
@@ -73,6 +77,7 @@ export type Database = {
           summary: string
           updated_at?: string
           user_id: string
+          vault_status?: string
         }
         Update: {
           agent_codename?: string
@@ -83,6 +88,7 @@ export type Database = {
           summary?: string
           updated_at?: string
           user_id?: string
+          vault_status?: string
         }
         Relationships: []
       }
@@ -96,6 +102,7 @@ export type Database = {
           topic: string | null
           updated_at: string
           user_id: string
+          vault_status: string
         }
         Insert: {
           agent_codename: string
@@ -106,6 +113,7 @@ export type Database = {
           topic?: string | null
           updated_at?: string
           user_id: string
+          vault_status?: string
         }
         Update: {
           agent_codename?: string
@@ -116,6 +124,7 @@ export type Database = {
           topic?: string | null
           updated_at?: string
           user_id?: string
+          vault_status?: string
         }
         Relationships: []
       }
@@ -131,6 +140,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          vault_status: string
         }
         Insert: {
           agent_codename: string
@@ -143,6 +153,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          vault_status?: string
         }
         Update: {
           agent_codename?: string
@@ -155,6 +166,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          vault_status?: string
         }
         Relationships: []
       }
@@ -346,6 +358,39 @@ export type Database = {
         }
         Relationships: []
       }
+      commander_personas: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          system_prompt: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          system_prompt: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          system_prompt?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -396,6 +441,7 @@ export type Database = {
           tools_used: string[] | null
           updated_at: string
           user_id: string
+          vault_status: string
         }
         Insert: {
           affected_url?: string | null
@@ -411,6 +457,7 @@ export type Database = {
           tools_used?: string[] | null
           updated_at?: string
           user_id: string
+          vault_status?: string
         }
         Update: {
           affected_url?: string | null
@@ -426,6 +473,7 @@ export type Database = {
           tools_used?: string[] | null
           updated_at?: string
           user_id?: string
+          vault_status?: string
         }
         Relationships: [
           {
