@@ -194,6 +194,31 @@ export default function ConversationFeed() {
     await runPrompt(text);
   };
 
+  // Pre-session scouting — Commander-only planning turn (no Leads called)
+  const runPreSessionScouting = async () => {
+    if (agentsThinking) return;
+    const scopeLine = isValidScope(target) ? target : "(no scope set — ask Operator)";
+    const prompt = `[PRE-SESSION SCOUTING — Commander only, do NOT call Leads]
+
+Operator is opening a hunt session. Conduct a pre-session scouting briefing.
+
+Current scope: ${scopeLine}
+Active persona: ${persona?.name ?? "default"}
+
+Produce a full SESSION OUTLINE FRAMEWORK before any Leads are summoned. Cover:
+
+1. SCOPE CONFIRMATION — what's in/out, asset classes, program rules-of-engagement to verify.
+2. INTEL GAPS — what we don't yet know about the target that we should fill before attacking.
+3. HUNT THESIS — 2-4 prioritized vulnerability classes / attack surfaces worth hunting today, with rationale.
+4. PHASED PLAN — numbered phases (Recon → Mapping → Probing → Exploitation → Reporting), each with the Lead who should own it and the trigger to advance.
+5. SUCCESS CRITERIA — what makes this session a win (specific finding types, coverage %, payout tier).
+6. OPEN QUESTIONS FOR OPERATOR — anything you need from me before we call any Lead.
+
+End with the required line: RECOMMENDED LEADS: none  (we are still planning; Leads are NOT yet summoned).`;
+    await runPrompt(prompt);
+  };
+
+
   const target = mission?.target || "target.com";
   const quickActions = [
     { label: "DNS Recon", icon: Globe, leads: ["PHANTOM"], prompt: `Run full DNS reconnaissance on ${target}. Enumerate A/AAAA/MX/NS/TXT/CNAME records, check AXFR, identify DNS providers and subdomain hints.` },
