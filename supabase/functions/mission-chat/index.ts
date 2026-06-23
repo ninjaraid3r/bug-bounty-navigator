@@ -184,15 +184,18 @@ serve(async (req) => {
     let cmdResp = "";
     if (!skipCommander) {
       const commander = AGENT_CHAIN[0];
+      const personaSuffix = personaPrompt
+        ? `\n\n=== ACTIVE PERSONA: ${personaName || "CUSTOM"} ===\n${personaPrompt}\nYou must operate in this persona for this turn. Reflect it in tone and tactics.`
+        : "";
       const cmdMessages = [
-        { role: "system", content: commander.personality },
+        { role: "system", content: commander.personality + personaSuffix },
         ...contextMessages,
         { role: "user", content: userMessage },
       ];
       cmdResp = await callAI(LOVABLE_API_KEY, cmdMessages);
       agentResponses.push({
         role: commander.role,
-        sender_name: commander.sender_name,
+        sender_name: personaName ? `Commander · ${personaName}` : commander.sender_name,
         content: cmdResp,
       });
     }
