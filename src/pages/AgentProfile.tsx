@@ -4,6 +4,7 @@ import {
   User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2, Loader2,
   Brain, Sparkles, AlertTriangle, Wrench, Search, Hammer, TrendingUp, FileText,
   Eraser, X, BookOpen, Layers, Send, Database, ChevronRight, Map as MapIcon, Check, ShieldCheck,
+  UserCog,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import ReconMapsPanel from "@/components/ReconMapsPanel";
+import PersonasDialog from "@/components/PersonasDialog";
 
 const AGENT_META: Record<string, { name: string; type: "manager" | "lead" | "raider"; tagline: string; specialty: string }> = {
   commander: { name: "COMMANDER", type: "manager", tagline: "Strategic mission manager", specialty: "Orchestration · Grading · Memory" },
