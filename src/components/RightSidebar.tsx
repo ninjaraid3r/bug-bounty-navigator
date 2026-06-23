@@ -139,13 +139,19 @@ export default function RightSidebar({ collapsed, onToggle }: RightSidebarProps)
 
   useEffect(() => {
     if (!user) return;
-    (supabase as any)
-      .from("commander_personas")
-      .select("name,is_active")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .maybeSingle()
-      .then(({ data }: any) => setActivePersona(data?.name ?? null));
+    const fetchPersona = () => {
+      (supabase as any)
+        .from("commander_personas")
+        .select("name,is_active")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle()
+        .then(({ data }: any) => setActivePersona(data?.name ?? null));
+    };
+    fetchPersona();
+    const h = () => fetchPersona();
+    window.addEventListener("liq:persona-changed", h);
+    return () => window.removeEventListener("liq:persona-changed", h);
   }, [user, showPersonas]);
 
   const persistLeads = (next: Agent[]) => {

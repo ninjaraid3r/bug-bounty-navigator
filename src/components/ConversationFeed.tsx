@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import {
   Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search,
   ShieldAlert, Mail, Target, Check, X, Pencil, Trash2, CheckSquare, Square, Save, PhoneCall, FileCheck,
+  UserCog, ClipboardList,
 } from "lucide-react";
 import { useMission, useMessages } from "@/hooks/useMission";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const roleStyles = {
@@ -41,6 +43,7 @@ function parseRecommendedLeads(content: string): string[] {
 export default function ConversationFeed() {
   const { mission, conversation, loading: missionLoading, updateTarget } = useMission();
   const { messages, loading: msgLoading, sendMessage, refresh } = useMessages(conversation?.id);
+  const { user } = useAuth();
   const [input, setInput] = useState("");
   const [agentsThinking, setAgentsThinking] = useState<string | null>(null);
   const [editingScope, setEditingScope] = useState(false);
@@ -50,8 +53,28 @@ export default function ConversationFeed() {
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [ending, setEnding] = useState(false);
+  const [persona, setPersona] = useState<{ name: string; system_prompt: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Active persona (live)
+  useEffect(() => {
+    if (!user) return;
+    const fetchPersona = async () => {
+      const { data } = await (supabase as any)
+        .from("commander_personas")
+        .select("name,system_prompt")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      setPersona(data ? { name: data.name, system_prompt: data.system_prompt } : null);
+    };
+    fetchPersona();
+    const h = () => fetchPersona();
+    window.addEventListener("liq:persona-changed", h);
+    return () => window.removeEventListener("liq:persona-changed", h);
+  }, [user]);
+
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -141,7 +164,9 @@ export default function ConversationFeed() {
       extraLeads,
       disabledBaseLeads,
       invokeLeads: [], // Commander-only
-    }, "Commander");
+      personaName: persona?.name,
+      personaPrompt: persona?.system_prompt,
+    }, persona ? `Commander · ${persona.name}` : "Commander");
   };
 
   // Operator summons specific Lead(s) — Commander does not re-respond.
@@ -168,6 +193,31 @@ export default function ConversationFeed() {
     setInput("");
     await runPrompt(text);
   };
+
+  // Pre-session scouting — Commander-only planning turn (no Leads called)
+  const runPreSessionScouting = async () => {
+    if (agentsThinking) return;
+    const scopeLine = isValidScope(target) ? target : "(no scope set — ask Operator)";
+    const prompt = `[PRE-SESSION SCOUTING — Commander only, do NOT call Leads]
+
+Operator is opening a hunt session. Conduct a pre-session scouting briefing.
+
+Current scope: ${scopeLine}
+Active persona: ${persona?.name ?? "default"}
+
+Produce a full SESSION OUTLINE FRAMEWORK before any Leads are summoned. Cover:
+
+1. SCOPE CONFIRMATION — what's in/out, asset classes, program rules-of-engagement to verify.
+2. INTEL GAPS — what we don't yet know about the target that we should fill before attacking.
+3. HUNT THESIS — 2-4 prioritized vulnerability classes / attack surfaces worth hunting today, with rationale.
+4. PHASED PLAN — numbered phases (Recon → Mapping → Probing → Exploitation → Reporting), each with the Lead who should own it and the trigger to advance.
+5. SUCCESS CRITERIA — what makes this session a win (specific finding types, coverage %, payout tier).
+6. OPEN QUESTIONS FOR OPERATOR — anything you need from me before we call any Lead.
+
+End with the required line: RECOMMENDED LEADS: none  (we are still planning; Leads are NOT yet summoned).`;
+    await runPrompt(prompt);
+  };
+
 
   const target = mission?.target || "target.com";
   const quickActions = [
@@ -267,17 +317,36 @@ export default function ConversationFeed() {
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-1">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse-gold" />
           <span className="font-mono text-xs font-bold text-primary tracking-wider neon-gold">MISSION FEED</span>
           <span className="text-[10px] font-mono text-muted-foreground px-2 py-0.5 rounded bg-surface-2 border border-border">
             {mission ? `ACTIVE — ${mission.name.toUpperCase()}` : "NO MISSION"}
           </span>
+          <span
+            className={`flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border ${
+              persona ? "border-primary/50 bg-primary/10 text-primary neon-gold" : "border-border bg-surface-2 text-muted-foreground"
+            }`}
+            title={persona?.system_prompt || "No persona active — Commander is using default voice."}
+          >
+            <UserCog className="w-3 h-3" />
+            COMMANDER: {persona?.name ?? "DEFAULT"}
+          </span>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
+          <button
+            onClick={runPreSessionScouting}
+            disabled={!!agentsThinking}
+            title="Commander-only planning turn: scope confirmation, intel gaps, hunt thesis, phased plan, success criteria. No Leads are called."
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20 hover:neon-gold-box transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ClipboardList className="w-3 h-3" />
+            Pre-Session Scouting
+          </button>
           <span>{messages.length} messages</span>
         </div>
       </div>
+
 
       {/* Selection toolbar */}
       <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-surface-1/60">

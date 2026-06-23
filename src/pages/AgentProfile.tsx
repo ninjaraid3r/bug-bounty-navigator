@@ -4,6 +4,7 @@ import {
   User, ArrowLeft, Trophy, Activity, Zap, Plus, Play, Trash2, Loader2,
   Brain, Sparkles, AlertTriangle, Wrench, Search, Hammer, TrendingUp, FileText,
   Eraser, X, BookOpen, Layers, Send, Database, ChevronRight, Map as MapIcon, Check, ShieldCheck,
+  UserCog,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import ReconMapsPanel from "@/components/ReconMapsPanel";
+import PersonasDialog from "@/components/PersonasDialog";
 
 const AGENT_META: Record<string, { name: string; type: "manager" | "lead" | "raider"; tagline: string; specialty: string }> = {
   commander: { name: "COMMANDER", type: "manager", tagline: "Strategic mission manager", specialty: "Orchestration · Grading · Memory" },
@@ -342,14 +344,60 @@ export default function AgentProfile() {
   }
 
   const isCommander = meta.name === "COMMANDER";
+  const [personasOpen, setPersonasOpen] = useState(false);
+  const [activePersonaName, setActivePersonaName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isCommander || !user) return;
+    const fetchActive = async () => {
+      const { data } = await (supabase as any)
+        .from("commander_personas")
+        .select("name")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      setActivePersonaName(data?.name ?? null);
+    };
+    fetchActive();
+    const h = () => fetchActive();
+    window.addEventListener("liq:persona-changed", h);
+    return () => window.removeEventListener("liq:persona-changed", h);
+  }, [isCommander, user, personasOpen]);
 
   return (
     <AppLayout
       title={meta.name}
-      subtitle={`${meta.tagline} · ${meta.specialty}`}
+      subtitle={
+        isCommander
+          ? `${meta.tagline} · Persona: ${activePersonaName ?? "DEFAULT"}`
+          : `${meta.tagline} · ${meta.specialty}`
+      }
       icon={User}
-      actions={<Button variant="ghost" size="sm" onClick={() => navigate(-1)}><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>}
+      actions={
+        <div className="flex items-center gap-2">
+          {isCommander && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPersonasOpen(true)}
+              className="border-primary/40 text-primary hover:bg-primary/10"
+            >
+              <UserCog className="w-4 h-4 mr-1" /> Manage Personas
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+          </Button>
+        </div>
+      }
     >
+      {isCommander && (
+        <PersonasDialog
+          open={personasOpen}
+          onClose={() => setPersonasOpen(false)}
+          onActiveChange={(n) => setActivePersonaName(n)}
+        />
+      )}
       <div className="p-5 space-y-5 max-w-6xl mx-auto">
         {/* Per-agent metric strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -357,6 +405,7 @@ export default function AgentProfile() {
             <StatCard key={m.label} label={m.label} value={(stats as any)[m.key] ?? 0} />
           ))}
         </div>
+
 
         <Tabs defaultValue="memory" className="w-full">
           <TabsList className="bg-surface-2/40 border border-border">
