@@ -43,6 +43,7 @@ function parseRecommendedLeads(content: string): string[] {
 export default function ConversationFeed() {
   const { mission, conversation, loading: missionLoading, updateTarget } = useMission();
   const { messages, loading: msgLoading, sendMessage, refresh } = useMessages(conversation?.id);
+  const { user } = useAuth();
   const [input, setInput] = useState("");
   const [agentsThinking, setAgentsThinking] = useState<string | null>(null);
   const [editingScope, setEditingScope] = useState(false);
@@ -52,8 +53,28 @@ export default function ConversationFeed() {
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [ending, setEnding] = useState(false);
+  const [persona, setPersona] = useState<{ name: string; system_prompt: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Active persona (live)
+  useEffect(() => {
+    if (!user) return;
+    const fetchPersona = async () => {
+      const { data } = await (supabase as any)
+        .from("commander_personas")
+        .select("name,system_prompt")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      setPersona(data ? { name: data.name, system_prompt: data.system_prompt } : null);
+    };
+    fetchPersona();
+    const h = () => fetchPersona();
+    window.addEventListener("liq:persona-changed", h);
+    return () => window.removeEventListener("liq:persona-changed", h);
+  }, [user]);
+
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
