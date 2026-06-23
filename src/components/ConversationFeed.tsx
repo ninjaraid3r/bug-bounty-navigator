@@ -317,17 +317,36 @@ End with the required line: RECOMMENDED LEADS: none  (we are still planning; Lea
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-1">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse-gold" />
           <span className="font-mono text-xs font-bold text-primary tracking-wider neon-gold">MISSION FEED</span>
           <span className="text-[10px] font-mono text-muted-foreground px-2 py-0.5 rounded bg-surface-2 border border-border">
             {mission ? `ACTIVE — ${mission.name.toUpperCase()}` : "NO MISSION"}
           </span>
+          <span
+            className={`flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border ${
+              persona ? "border-primary/50 bg-primary/10 text-primary neon-gold" : "border-border bg-surface-2 text-muted-foreground"
+            }`}
+            title={persona?.system_prompt || "No persona active — Commander is using default voice."}
+          >
+            <UserCog className="w-3 h-3" />
+            COMMANDER: {persona?.name ?? "DEFAULT"}
+          </span>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
+          <button
+            onClick={runPreSessionScouting}
+            disabled={!!agentsThinking}
+            title="Commander-only planning turn: scope confirmation, intel gaps, hunt thesis, phased plan, success criteria. No Leads are called."
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20 hover:neon-gold-box transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ClipboardList className="w-3 h-3" />
+            Pre-Session Scouting
+          </button>
           <span>{messages.length} messages</span>
         </div>
       </div>
+
 
       {/* Selection toolbar */}
       <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-surface-1/60">
