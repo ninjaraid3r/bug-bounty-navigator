@@ -164,7 +164,9 @@ export default function ConversationFeed() {
       extraLeads,
       disabledBaseLeads,
       invokeLeads: [], // Commander-only
-    }, "Commander");
+      personaName: persona?.name,
+      personaPrompt: persona?.system_prompt,
+    }, persona ? `Commander · ${persona.name}` : "Commander");
   };
 
   // Operator summons specific Lead(s) — Commander does not re-respond.
