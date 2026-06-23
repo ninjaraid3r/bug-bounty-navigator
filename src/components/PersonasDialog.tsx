@@ -67,6 +67,7 @@ export default function PersonasDialog({ open, onClose, onActiveChange }: Props)
       await (supabase as any).from("commander_personas").insert({ user_id: user.id, name: editing.name, description: editing.description || "", system_prompt: editing.system_prompt, is_active: personas.length === 0 });
     }
     setEditing(null);
+    try { window.dispatchEvent(new Event("liq:persona-changed")); } catch {}
     load();
   }
 
