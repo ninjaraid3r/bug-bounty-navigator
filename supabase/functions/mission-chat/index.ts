@@ -101,7 +101,7 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, userMessage, history, missionId, extraLeads, disabledBaseLeads, invokeLeads, skipCommander } = await req.json();
+    const { conversationId, userMessage, history, missionId, extraLeads, disabledBaseLeads, invokeLeads, skipCommander, personaName, personaPrompt } = await req.json();
     const disabledSet = new Set(
       Array.isArray(disabledBaseLeads)
         ? disabledBaseLeads.map((s: any) => String(s).toUpperCase())
