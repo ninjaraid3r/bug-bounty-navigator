@@ -49,6 +49,7 @@ export default function PersonasDialog({ open, onClose, onActiveChange }: Props)
     await (supabase as any).from("commander_personas").update({ is_active: false }).eq("user_id", user.id);
     await (supabase as any).from("commander_personas").update({ is_active: true }).eq("id", p.id);
     toast({ title: `${p.name} is now active` });
+    try { window.dispatchEvent(new Event("liq:persona-changed")); } catch {}
     load();
   }
 
