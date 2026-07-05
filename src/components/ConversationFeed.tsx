@@ -220,7 +220,7 @@ export default function ConversationFeed() {
 
   // Pre-session scouting — Commander-only planning turn (no Leads called)
   const runPreSessionScouting = async () => {
-    if (agentsThinking) return;
+    if (agentsThinking || !conversation?.id) return;
     const scopeLine = isValidScope(target) ? target : "(no scope set — ask Operator)";
     const prompt = `[PRE-SESSION SCOUTING — Commander only, do NOT call Leads]
 
@@ -239,8 +239,57 @@ Produce a full SESSION OUTLINE FRAMEWORK before any Leads are summoned. Cover:
 6. OPEN QUESTIONS FOR OPERATOR — anything you need from me before we call any Lead.
 
 End with the required line: RECOMMENDED LEADS: none  (we are still planning; Leads are NOT yet summoned).`;
+    // Lock Lead summoning until Operator confirms the outline
+    localStorage.setItem(`liq.scoutingRun.${conversation.id}`, String(Date.now()));
+    localStorage.removeItem(`liq.outlineConfirmed.${conversation.id}`);
+    setScoutingRun(true);
+    setOutlineConfirmed(false);
     await runPrompt(prompt);
+    // Auto-open finalize panel populated with the latest commander message
+    setTimeout(() => setOutlineOpen(true), 300);
   };
+
+  // Populate outline draft from the most recent commander message when panel opens
+  useEffect(() => {
+    if (!outlineOpen) return;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "manager") {
+        setOutlineMsgId(messages[i].id);
+        setOutlineDraft(messages[i].content);
+        return;
+      }
+    }
+  }, [outlineOpen, messages]);
+
+  async function saveOutlineEdits() {
+    if (!outlineMsgId) return;
+    setSavingOutline(true);
+    const { error } = await supabase.from("messages").update({ content: outlineDraft }).eq("id", outlineMsgId);
+    setSavingOutline(false);
+    if (error) return toast({ title: "Save failed", description: error.message, variant: "destructive" });
+    toast({ title: "Outline updated" });
+    await refresh();
+  }
+
+  function confirmOutline() {
+    if (!conversation?.id) return;
+    localStorage.setItem(`liq.outlineConfirmed.${conversation.id}`, "1");
+    setOutlineConfirmed(true);
+    setOutlineOpen(false);
+    toast({ title: "Outline confirmed", description: "Leads are now unlocked — summon them from the CALL LEAD chips." });
+  }
+
+  function resetOutline() {
+    if (!conversation?.id) return;
+    localStorage.removeItem(`liq.scoutingRun.${conversation.id}`);
+    localStorage.removeItem(`liq.outlineConfirmed.${conversation.id}`);
+    setScoutingRun(false);
+    setOutlineConfirmed(false);
+    setOutlineOpen(false);
+    toast({ title: "Outline reset" });
+  }
+
+
 
 
   const target = mission?.target || "target.com";
