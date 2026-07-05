@@ -54,6 +54,12 @@ export default function ConversationFeed() {
   const [editDraft, setEditDraft] = useState("");
   const [ending, setEnding] = useState(false);
   const [persona, setPersona] = useState<{ name: string; system_prompt: string } | null>(null);
+  const [outlineOpen, setOutlineOpen] = useState(false);
+  const [outlineDraft, setOutlineDraft] = useState("");
+  const [outlineMsgId, setOutlineMsgId] = useState<string | null>(null);
+  const [outlineConfirmed, setOutlineConfirmed] = useState(false);
+  const [scoutingRun, setScoutingRun] = useState(false);
+  const [savingOutline, setSavingOutline] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
