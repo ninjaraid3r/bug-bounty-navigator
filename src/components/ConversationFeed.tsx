@@ -435,6 +435,64 @@ End with the required line: RECOMMENDED LEADS: none  (we are still planning; Lea
 
       </div>
 
+      {/* Finalize Session Outline panel */}
+      {outlineOpen && (
+        <div className="border-b border-primary/40 bg-primary/[0.04] px-4 py-3 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <FileText className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[11px] font-mono font-bold text-primary tracking-wider">
+              SESSION OUTLINE — REVIEW & FINALIZE
+            </span>
+            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+              outlineConfirmed ? "border-primary/50 bg-primary/10 text-primary" : "border-destructive/40 bg-destructive/10 text-destructive"
+            }`}>
+              {outlineConfirmed ? "CONFIRMED — LEADS UNLOCKED" : "LOCKED — LEADS DISABLED"}
+            </span>
+            <div className="flex-1" />
+            <button onClick={() => setOutlineOpen(false)} className="p-0.5 rounded text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-[10px] font-mono text-muted-foreground">
+            Edit the Commander's framework below. When it reflects the plan you and the Commander agreed on, confirm to unlock Lead summoning.
+          </p>
+          <textarea
+            value={outlineDraft}
+            onChange={(e) => setOutlineDraft(e.target.value)}
+            rows={12}
+            className="w-full text-[11px] leading-relaxed bg-surface-2 border border-primary/30 rounded p-2 font-mono text-foreground focus:outline-none focus:border-primary/60"
+            placeholder="No commander outline found yet — run Pre-Session Scouting first."
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={saveOutlineEdits}
+              disabled={!outlineMsgId || savingOutline}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono bg-surface-2 border border-primary/40 text-primary hover:bg-primary/15 disabled:opacity-40"
+            >
+              {savingOutline ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+              Save Edits
+            </button>
+            <button
+              onClick={confirmOutline}
+              disabled={!outlineDraft.trim()}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+            >
+              <Unlock className="w-3 h-3" />
+              Confirm Outline & Unlock Leads
+            </button>
+            <button
+              onClick={resetOutline}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono border border-border text-muted-foreground hover:text-foreground"
+              title="Clear the outline lock — you can re-run Pre-Session Scouting from scratch."
+            >
+              <X className="w-3 h-3" /> Reset
+            </button>
+          </div>
+        </div>
+      )}
+
+
+
 
       {/* Selection toolbar */}
       <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-surface-1/60">
