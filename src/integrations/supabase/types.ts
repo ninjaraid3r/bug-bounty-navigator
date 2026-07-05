@@ -667,6 +667,51 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          notes: string | null
+          payout: number
+          report_date: string
+          severity: string
+          status: string
+          target: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          notes?: string | null
+          payout?: number
+          report_date?: string
+          severity?: string
+          status?: string
+          target?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          notes?: string | null
+          payout?: number
+          report_date?: string
+          severity?: string
+          status?: string
+          target?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           agent_insights: Json
