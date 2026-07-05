@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Send, Crosshair, User, Swords, Activity, Loader2, Bot, Globe, Network, Fingerprint, Search,
   ShieldAlert, Mail, Target, Check, X, Pencil, Trash2, CheckSquare, Square, Save, PhoneCall, FileCheck,
-  UserCog, ClipboardList,
+  UserCog, ClipboardList, Lock, Unlock, FileText,
 } from "lucide-react";
 import { useMission, useMessages } from "@/hooks/useMission";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +54,12 @@ export default function ConversationFeed() {
   const [editDraft, setEditDraft] = useState("");
   const [ending, setEnding] = useState(false);
   const [persona, setPersona] = useState<{ name: string; system_prompt: string } | null>(null);
+  const [outlineOpen, setOutlineOpen] = useState(false);
+  const [outlineDraft, setOutlineDraft] = useState("");
+  const [outlineMsgId, setOutlineMsgId] = useState<string | null>(null);
+  const [outlineConfirmed, setOutlineConfirmed] = useState(false);
+  const [scoutingRun, setScoutingRun] = useState(false);
+  const [savingOutline, setSavingOutline] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -75,6 +81,15 @@ export default function ConversationFeed() {
     return () => window.removeEventListener("liq:persona-changed", h);
   }, [user]);
 
+
+  // Restore outline lock state per conversation
+  useEffect(() => {
+    if (!conversation?.id) { setScoutingRun(false); setOutlineConfirmed(false); return; }
+    setScoutingRun(!!localStorage.getItem(`liq.scoutingRun.${conversation.id}`));
+    setOutlineConfirmed(!!localStorage.getItem(`liq.outlineConfirmed.${conversation.id}`));
+  }, [conversation?.id]);
+
+  const outlineLocked = scoutingRun && !outlineConfirmed;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -172,6 +187,15 @@ export default function ConversationFeed() {
   // Operator summons specific Lead(s) — Commander does not re-respond.
   const callLeads = async (leadCodes: string[]) => {
     if (!leadCodes.length || agentsThinking) return;
+    if (outlineLocked) {
+      toast({
+        title: "Session outline not finalized",
+        description: "Review and confirm the Commander's session outline before summoning Leads.",
+        variant: "destructive",
+      });
+      setOutlineOpen(true);
+      return;
+    }
     const summons = `[Operator] Calling on ${leadCodes.join(", ")} per the agreed plan. Execute your part.`;
     const userMsg = await sendMessage(summons);
     if (!userMsg) return;
@@ -196,7 +220,7 @@ export default function ConversationFeed() {
 
   // Pre-session scouting — Commander-only planning turn (no Leads called)
   const runPreSessionScouting = async () => {
-    if (agentsThinking) return;
+    if (agentsThinking || !conversation?.id) return;
     const scopeLine = isValidScope(target) ? target : "(no scope set — ask Operator)";
     const prompt = `[PRE-SESSION SCOUTING — Commander only, do NOT call Leads]
 
@@ -215,8 +239,57 @@ Produce a full SESSION OUTLINE FRAMEWORK before any Leads are summoned. Cover:
 6. OPEN QUESTIONS FOR OPERATOR — anything you need from me before we call any Lead.
 
 End with the required line: RECOMMENDED LEADS: none  (we are still planning; Leads are NOT yet summoned).`;
+    // Lock Lead summoning until Operator confirms the outline
+    localStorage.setItem(`liq.scoutingRun.${conversation.id}`, String(Date.now()));
+    localStorage.removeItem(`liq.outlineConfirmed.${conversation.id}`);
+    setScoutingRun(true);
+    setOutlineConfirmed(false);
     await runPrompt(prompt);
+    // Auto-open finalize panel populated with the latest commander message
+    setTimeout(() => setOutlineOpen(true), 300);
   };
+
+  // Populate outline draft from the most recent commander message when panel opens
+  useEffect(() => {
+    if (!outlineOpen) return;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "manager") {
+        setOutlineMsgId(messages[i].id);
+        setOutlineDraft(messages[i].content);
+        return;
+      }
+    }
+  }, [outlineOpen, messages]);
+
+  async function saveOutlineEdits() {
+    if (!outlineMsgId) return;
+    setSavingOutline(true);
+    const { error } = await supabase.from("messages").update({ content: outlineDraft }).eq("id", outlineMsgId);
+    setSavingOutline(false);
+    if (error) return toast({ title: "Save failed", description: error.message, variant: "destructive" });
+    toast({ title: "Outline updated" });
+    await refresh();
+  }
+
+  function confirmOutline() {
+    if (!conversation?.id) return;
+    localStorage.setItem(`liq.outlineConfirmed.${conversation.id}`, "1");
+    setOutlineConfirmed(true);
+    setOutlineOpen(false);
+    toast({ title: "Outline confirmed", description: "Leads are now unlocked — summon them from the CALL LEAD chips." });
+  }
+
+  function resetOutline() {
+    if (!conversation?.id) return;
+    localStorage.removeItem(`liq.scoutingRun.${conversation.id}`);
+    localStorage.removeItem(`liq.outlineConfirmed.${conversation.id}`);
+    setScoutingRun(false);
+    setOutlineConfirmed(false);
+    setOutlineOpen(false);
+    toast({ title: "Outline reset" });
+  }
+
+
 
 
   const target = mission?.target || "target.com";
@@ -343,9 +416,82 @@ End with the required line: RECOMMENDED LEADS: none  (we are still planning; Lea
             <ClipboardList className="w-3 h-3" />
             Pre-Session Scouting
           </button>
+          {scoutingRun && (
+            <button
+              onClick={() => setOutlineOpen((v) => !v)}
+              title={outlineConfirmed ? "Outline confirmed — Leads unlocked. Click to review/edit again." : "Review & confirm the session outline to unlock Leads."}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono border transition-all ${
+                outlineConfirmed
+                  ? "bg-primary/10 border-primary/40 text-primary hover:bg-primary/20"
+                  : "bg-destructive/10 border-destructive/50 text-destructive hover:bg-destructive/20 animate-pulse"
+              }`}
+            >
+              {outlineConfirmed ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+              {outlineConfirmed ? "Outline Confirmed" : "Finalize Session Outline"}
+            </button>
+          )}
           <span>{messages.length} messages</span>
         </div>
+
       </div>
+
+      {/* Finalize Session Outline panel */}
+      {outlineOpen && (
+        <div className="border-b border-primary/40 bg-primary/[0.04] px-4 py-3 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <FileText className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[11px] font-mono font-bold text-primary tracking-wider">
+              SESSION OUTLINE — REVIEW & FINALIZE
+            </span>
+            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+              outlineConfirmed ? "border-primary/50 bg-primary/10 text-primary" : "border-destructive/40 bg-destructive/10 text-destructive"
+            }`}>
+              {outlineConfirmed ? "CONFIRMED — LEADS UNLOCKED" : "LOCKED — LEADS DISABLED"}
+            </span>
+            <div className="flex-1" />
+            <button onClick={() => setOutlineOpen(false)} className="p-0.5 rounded text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-[10px] font-mono text-muted-foreground">
+            Edit the Commander's framework below. When it reflects the plan you and the Commander agreed on, confirm to unlock Lead summoning.
+          </p>
+          <textarea
+            value={outlineDraft}
+            onChange={(e) => setOutlineDraft(e.target.value)}
+            rows={12}
+            className="w-full text-[11px] leading-relaxed bg-surface-2 border border-primary/30 rounded p-2 font-mono text-foreground focus:outline-none focus:border-primary/60"
+            placeholder="No commander outline found yet — run Pre-Session Scouting first."
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={saveOutlineEdits}
+              disabled={!outlineMsgId || savingOutline}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono bg-surface-2 border border-primary/40 text-primary hover:bg-primary/15 disabled:opacity-40"
+            >
+              {savingOutline ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+              Save Edits
+            </button>
+            <button
+              onClick={confirmOutline}
+              disabled={!outlineDraft.trim()}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+            >
+              <Unlock className="w-3 h-3" />
+              Confirm Outline & Unlock Leads
+            </button>
+            <button
+              onClick={resetOutline}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono border border-border text-muted-foreground hover:text-foreground"
+              title="Clear the outline lock — you can re-run Pre-Session Scouting from scratch."
+            >
+              <X className="w-3 h-3" /> Reset
+            </button>
+          </div>
+        </div>
+      )}
+
+
 
 
       {/* Selection toolbar */}
@@ -462,14 +608,20 @@ End with the required line: RECOMMENDED LEADS: none  (we are still planning; Lea
       <div className="px-3 pt-2 pb-2 border-t border-border bg-surface-1">
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
           <span className="text-[9px] font-mono font-bold text-primary tracking-wider">CALL LEAD</span>
-          <span className="text-[9px] font-mono text-muted-foreground">
-            {recommended.length ? "Commander recommends:" : "Plan with Commander first, then summon a Lead:"}
-          </span>
+          {outlineLocked ? (
+            <span className="flex items-center gap-1 text-[9px] font-mono text-destructive">
+              <Lock className="w-2.5 h-2.5" /> Locked — finalize the session outline to unlock Leads
+            </span>
+          ) : (
+            <span className="text-[9px] font-mono text-muted-foreground">
+              {recommended.length ? "Commander recommends:" : "Plan with Commander first, then summon a Lead:"}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {BASE_LEADS.map((lead) => {
             const isRec = recommended.includes(lead);
-            const disabled = !!agentsThinking;
+            const disabled = !!agentsThinking || outlineLocked;
             return (
               <button
                 key={lead}
