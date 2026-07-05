@@ -82,6 +82,15 @@ export default function ConversationFeed() {
   }, [user]);
 
 
+  // Restore outline lock state per conversation
+  useEffect(() => {
+    if (!conversation?.id) { setScoutingRun(false); setOutlineConfirmed(false); return; }
+    setScoutingRun(!!localStorage.getItem(`liq.scoutingRun.${conversation.id}`));
+    setOutlineConfirmed(!!localStorage.getItem(`liq.outlineConfirmed.${conversation.id}`));
+  }, [conversation?.id]);
+
+  const outlineLocked = scoutingRun && !outlineConfirmed;
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, agentsThinking]);
