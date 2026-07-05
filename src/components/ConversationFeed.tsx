@@ -187,6 +187,15 @@ export default function ConversationFeed() {
   // Operator summons specific Lead(s) — Commander does not re-respond.
   const callLeads = async (leadCodes: string[]) => {
     if (!leadCodes.length || agentsThinking) return;
+    if (outlineLocked) {
+      toast({
+        title: "Session outline not finalized",
+        description: "Review and confirm the Commander's session outline before summoning Leads.",
+        variant: "destructive",
+      });
+      setOutlineOpen(true);
+      return;
+    }
     const summons = `[Operator] Calling on ${leadCodes.join(", ")} per the agreed plan. Execute your part.`;
     const userMsg = await sendMessage(summons);
     if (!userMsg) return;
