@@ -608,14 +608,20 @@ End with the required line: RECOMMENDED LEADS: none  (we are still planning; Lea
       <div className="px-3 pt-2 pb-2 border-t border-border bg-surface-1">
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
           <span className="text-[9px] font-mono font-bold text-primary tracking-wider">CALL LEAD</span>
-          <span className="text-[9px] font-mono text-muted-foreground">
-            {recommended.length ? "Commander recommends:" : "Plan with Commander first, then summon a Lead:"}
-          </span>
+          {outlineLocked ? (
+            <span className="flex items-center gap-1 text-[9px] font-mono text-destructive">
+              <Lock className="w-2.5 h-2.5" /> Locked — finalize the session outline to unlock Leads
+            </span>
+          ) : (
+            <span className="text-[9px] font-mono text-muted-foreground">
+              {recommended.length ? "Commander recommends:" : "Plan with Commander first, then summon a Lead:"}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {BASE_LEADS.map((lead) => {
             const isRec = recommended.includes(lead);
-            const disabled = !!agentsThinking;
+            const disabled = !!agentsThinking || outlineLocked;
             return (
               <button
                 key={lead}
