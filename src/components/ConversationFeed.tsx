@@ -416,8 +416,23 @@ End with the required line: RECOMMENDED LEADS: none  (we are still planning; Lea
             <ClipboardList className="w-3 h-3" />
             Pre-Session Scouting
           </button>
+          {scoutingRun && (
+            <button
+              onClick={() => setOutlineOpen((v) => !v)}
+              title={outlineConfirmed ? "Outline confirmed — Leads unlocked. Click to review/edit again." : "Review & confirm the session outline to unlock Leads."}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono border transition-all ${
+                outlineConfirmed
+                  ? "bg-primary/10 border-primary/40 text-primary hover:bg-primary/20"
+                  : "bg-destructive/10 border-destructive/50 text-destructive hover:bg-destructive/20 animate-pulse"
+              }`}
+            >
+              {outlineConfirmed ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+              {outlineConfirmed ? "Outline Confirmed" : "Finalize Session Outline"}
+            </button>
+          )}
           <span>{messages.length} messages</span>
         </div>
+
       </div>
 
 
