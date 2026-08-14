@@ -1,62 +1,70 @@
-## 0. Smoke test first
-- Open the preview and walk these routes to confirm no runtime errors after the recent AppShell/Agents refactor: `/`, `/agents`, `/agents/tier/leads`, `/commander/sessions`, `/targets`, `/settings`, `/skills/pending`.
-- Verify the flicker fix still holds and the new agent_* tables read cleanly.
-- Capture any breakage and fix before starting the consolidation work below.
+# Practice Lab + Patterns Library
 
-## 1. Tab consolidation
+Add two new tabs to the platform: a **Practice Lab** with curated vulnerable-site cards agents can train on (synced with Recon), and a **Patterns** library where every agent contributes learned patterns and the Commander approves/rejects them.
 
-### A. New "Offensive Ops" tab (`/offensive-ops`)
-Merges: Exploit Lab + Vuln Scanner + Automation + Payload Forge.
-- Single page with 4 sub-sections rendered as a vertical stack of **expandable hero cards** (click to expand → reveals full toolset for that section, click again to collapse). Only one open at a time.
-  - Exploit Lab — PoC runner, recent exploit attempts, success rate ring.
-  - Vuln Scanner — scan queue, severity histogram, last-scan delta.
-  - Automation — pipelines, schedule heatmap, run history.
-  - Payload Forge — category grid, copy-to-clipboard, "send to Exploit Lab" handoff.
-- Collapsed state shows a metric strip (count, last-run, status pulse). Expanded state shows the full tool surface plus a new "Innovations" mini-panel suggesting next-step automations derived from the data already present (no new business logic — purely UI surfacing what the table already holds).
-- Remove old sidebar entries for Exploit Lab, Vuln Scanner, Automation, Payload Forge; keep routes redirecting to `/offensive-ops` so old links don't 404.
+## 1. Practice Lab (`/lab`)
 
-### B. New "Intel Map" tab (`/intel-map`)
-Merges: Targets + Reports + Network Map.
-- Top hero: live Network Map canvas (existing component) full-bleed.
-- Below: two expandable card columns — **Targets** (asset list, status, scope) and **Reports** (PDF/MD findings, severity breakdown). Each card click-to-expand into a rich detail drawer with metrics: open findings per target, last-touched, related recon nodes.
-- Innovations strip: "Auto-correlate findings to targets", "Generate exec report from selected nodes" — UI surfaces only, wired to existing endpoints where they exist.
-- Sidebar removes Targets / Reports / Network Map; routes redirect to `/intel-map`.
+New page with a grid of clickable **Lab Cards**, each representing a legally-safe intentionally-vulnerable practice target:
 
-## 2. New "Data Vault" tab (`/data-vault`)
-Single source of truth for what graduates into the knowledge base.
-- Pulls from `agent_learnings`, `agent_memory`, `agent_opinions`, `agent_recommendations`, plus findings + session summaries.
-- Three columns: **Pending** | **Confirmed** | **Rejected**. Each row is a clickable card → drawer with source agent, session link, raw text, metadata.
-- Bulk select + Confirm/Reject buttons. Confirm flips a new `status` column (`pending|confirmed|rejected`) on the source row; confirmed items are what the rest of the platform treats as canonical.
-- Migration: add nullable `vault_status text default 'pending'` to the four agent_* tables + `findings`. Backfill existing rows to `pending`. RLS unchanged (user-scoped).
+1. **OWASP Juice Shop** — `https://juice-shop.herokuapp.com` — modern JS app, full OWASP Top 10.
+2. **DVWA** (Damn Vulnerable Web App) — `http://www.dvwa.co.uk` / local — classic PHP/MySQL vuln lab.
+3. **PortSwigger Web Security Academy** — `https://portswigger.net/web-security` — hosted labs by vuln class.
+4. **HackTheBox / testphp.vulnweb.com** — `http://testphp.vulnweb.com` — Acunetix's public test site (SQLi, XSS).
+5. **Google Gruyere** — `https://google-gruyere.appspot.com` — XSS, CSRF, AuthZ.
+6. **HackThisSite** — `https://www.hackthissite.org` — legal challenges + missions.
+7. **Hack The Box: Web Challenges** — `https://www.hackthebox.com` — reference link.
 
-## 3. Settings expansion
-Keep all current toggles; add a second column of cards:
-- **AGENT DEFAULTS** — default Lead persona, auto-spawn raiders on new session, max concurrent raiders (slider).
-- **DATA VAULT** — auto-confirm High learnings, auto-reject Low after N days, require commander sign-off.
-- **NOTIFICATIONS+** — session-end summary, new persona added, skill approved.
-- **INTERFACE** — sidebar collapsed by default, reduce motion, compact density.
-- **INTEGRATIONS** — placeholders (disabled toggles) for HackerOne / Bugcrowd / Slack webhook URLs (text inputs, persisted to localStorage only for now).
-All new state persists to localStorage; no schema change required.
+Each card shows: name, target URL, difficulty, vuln categories (tags), short description, "Open Lab Session" button.
 
-## 4. Commander Personas (RightSidebar)
-- Add a **Personas** button on the Commander card in the right sidebar.
-- Clicking opens a dialog/sheet showing:
-  - Current active persona (highlighted) with description.
-  - Library of template personas (seeded list of 4-6: Strategist, Red-Team Lead, Bug-Bounty Hunter, Stealth Operator, Teacher, Auditor).
-  - Per-row Edit / Delete buttons; top-level "Add new persona from template" → form (name, role, system prompt).
-- Selecting a persona sets it active; the persona **name** then renders inline on the Commander card under the role line (e.g. "Manager Agent · STRATEGIST").
-- Storage: new `commander_personas` table (id, user_id, name, description, system_prompt, is_active, created_at). RLS user-scoped, GRANTs to authenticated + service_role. Only one `is_active=true` per user enforced client-side on save.
+### Lab Session flow
+Clicking a card opens a **Lab Session** dialog with:
+- **Template picker**: `Full Recon Sweep`, `Auth & Session Testing`, `Injection Hunt (SQLi/XSSI/SSTI)`, `Business Logic Probe`, `API Fuzzing`, or `Custom Session` (blank).
+- Optional operator notes.
+- **Start Session** button → creates a new `missions` row with `name = "LAB: {site}"`, `target = url`, `notes = template + operator notes`, `status = 'active'`, then navigates to `/` (Recon) so Commander/Leads pick it up as the active mission.
+- Because `useMission` selects the latest active mission, the new lab mission becomes the live one and the conversation feed is scoped to it.
 
-## 5. Order of operations
-1. Smoke test → fix any breakage.
-2. Migration: vault_status columns + commander_personas table.
-3. Build `/offensive-ops` and `/intel-map`, add redirects, update LeftSidebar.
-4. Build `/data-vault`.
-5. Extend Settings.
-6. Build Personas card + dialog in RightSidebar, wire to commander_personas.
-7. Final preview pass on every route.
+## 2. Patterns Library (`/patterns`)
 
-## Out of scope this pass
-- Filesystem `.md` export of skills (still DB-only).
-- Real HackerOne/Bugcrowd integrations (UI shells only).
-- AI auto-grading of vault items (manual confirm/reject only).
+New tab where every agent (raider + leads) submits patterns they've learned; Commander approves or declines.
+
+### DB — new table `patterns`
+```
+id uuid pk
+user_id uuid not null
+mission_id uuid null (source mission, optional)
+session_id uuid null
+agent_codename text not null       -- who found it
+category text not null             -- e.g. auth, injection, recon, business-logic
+title text not null
+description text not null
+example text null                  -- payload/snippet
+tags text[] default '{}'
+status text not null default 'pending'   -- pending | approved | declined
+commander_note text null
+created_at timestamptz default now()
+reviewed_at timestamptz null
+```
++ standard grants + RLS (owner-only) + updated_at trigger not needed (no updated_at).
+
+### Patterns page
+- Filter chips: `All | Pending | Approved | Declined` + agent filter.
+- Cards show title, agent, category, tags, description, example, status pill.
+- Commander actions per pending card: **Approve** / **Decline** (with optional note) → updates row, flips status.
+- **Add Pattern** button opens a form (agent codename dropdown incl. `Operator`, category, title, description, example, tags). Approved patterns feed the Second Brain-style knowledge base.
+
+### Agent instruction injection
+Update `mission-chat/index.ts` system prompts so every Lead + Raider is told: *"When you notice a novel exploitation or recon pattern during this session, emit a `PATTERN:` block at the end of your message with `title | category | description | example`. These are queued for Commander review — do not treat them as approved skills."*
+Commander system prompt gets: *"You are the sole approver of new patterns. When the operator asks about pending patterns, summarise and recommend accept/decline."*
+
+Parsing agent output for `PATTERN:` blocks and auto-inserting `patterns` rows (status=pending, agent_codename=lead) happens in the edge function after each lead reply.
+
+## 3. Navigation
+Add `Lab` (FlaskConical icon) and `Patterns` (Sparkles icon) to `LeftSidebar` between existing items. Add routes in `App.tsx`.
+
+## 4. Files touched
+- New: `src/pages/PracticeLab.tsx`, `src/pages/Patterns.tsx`, `supabase/migrations/<ts>_patterns.sql`
+- Edit: `src/App.tsx`, `src/components/LeftSidebar.tsx`, `supabase/functions/mission-chat/index.ts`
+
+## Out of scope
+- Actually proxying/embedding lab sites (we link out — safer legally).
+- Automated pattern extraction from historical sessions (only new agent turns).
