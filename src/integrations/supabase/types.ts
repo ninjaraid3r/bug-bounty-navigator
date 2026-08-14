@@ -572,6 +572,57 @@ export type Database = {
         }
         Relationships: []
       }
+      patterns: {
+        Row: {
+          agent_codename: string
+          category: string
+          commander_note: string | null
+          created_at: string
+          description: string
+          example: string | null
+          id: string
+          mission_id: string | null
+          reviewed_at: string | null
+          session_id: string | null
+          status: string
+          tags: string[]
+          title: string
+          user_id: string
+        }
+        Insert: {
+          agent_codename: string
+          category: string
+          commander_note?: string | null
+          created_at?: string
+          description: string
+          example?: string | null
+          id?: string
+          mission_id?: string | null
+          reviewed_at?: string | null
+          session_id?: string | null
+          status?: string
+          tags?: string[]
+          title: string
+          user_id: string
+        }
+        Update: {
+          agent_codename?: string
+          category?: string
+          commander_note?: string | null
+          created_at?: string
+          description?: string
+          example?: string | null
+          id?: string
+          mission_id?: string | null
+          reviewed_at?: string | null
+          session_id?: string | null
+          status?: string
+          tags?: string[]
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       recon_map_nodes: {
         Row: {
           created_at: string

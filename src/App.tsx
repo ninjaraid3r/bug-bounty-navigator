@@ -20,6 +20,8 @@ import SessionDetail from "./pages/SessionDetail";
 import SkillApprovalQueue from "./pages/SkillApprovalQueue";
 import Agents from "./pages/Agents";
 import AgentsTier from "./pages/AgentsTier";
+import PracticeLab from "./pages/PracticeLab";
+import Patterns from "./pages/Patterns";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +62,8 @@ const AppRoutes = () => (
 
         <Route path="/settings" element={<Settings />} />
         <Route path="/agents" element={<Agents />} />
+        <Route path="/lab" element={<PracticeLab />} />
+        <Route path="/patterns" element={<Patterns />} />
         <Route path="/agents/tier/:tier" element={<AgentsTier />} />
         <Route path="/agents/:codename" element={<AgentProfile />} />
         <Route path="/commander/sessions" element={<CommanderSessions />} />
