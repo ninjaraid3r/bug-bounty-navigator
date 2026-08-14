@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft, ChevronRight, Radar, Swords, Crosshair, Database,
   Settings, BookOpen, DollarSign, ShieldCheck, Users, Globe,
+  FlaskConical, Sparkles,
 } from "lucide-react";
 
 const navItems = [
@@ -10,6 +11,8 @@ const navItems = [
   { icon: Users, label: "Agents", path: "/agents" },
   { icon: Swords, label: "Offensive Ops", path: "/offensive-ops" },
   { icon: Crosshair, label: "Intel Map", path: "/intel-map" },
+  { icon: FlaskConical, label: "Practice Lab", path: "/lab" },
+  { icon: Sparkles, label: "Patterns", path: "/patterns" },
   { icon: Database, label: "Data Vault", path: "/data-vault" },
   { icon: BookOpen, label: "Second Brain", path: "/second-brain" },
   { icon: DollarSign, label: "Bounty", path: "/bounty" },
