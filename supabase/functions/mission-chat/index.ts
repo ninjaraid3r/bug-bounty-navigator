@@ -293,6 +293,55 @@ These blocks are queued for Commander approval — do not treat them as already-
       }).eq("id", sessionId);
     }
 
+    // === Extract PATTERN / POC capture blocks from lead responses ===
+    if (insertedMsgs) {
+      const patternRows: any[] = [];
+      const pocRows: any[] = [];
+      leadResults.forEach((resp) => {
+        const msgIdx = agentResponses.findIndex((a) => a === resp);
+        const msg = insertedMsgs[msgIdx];
+        for (const block of extractBlocks(resp.content, "pattern")) {
+          const p = parseKV(block);
+          if (!p.title || !p.description) continue;
+          patternRows.push({
+            user_id: user.id,
+            mission_id: resolvedMissionId ?? null,
+            session_id: sessionId ?? null,
+            agent_codename: resp.codename,
+            category: (p.category || "misc").toLowerCase(),
+            title: p.title.slice(0, 200),
+            description: p.description,
+            example: p.example || null,
+            tags: splitList(p.tags),
+            status: "pending",
+          });
+        }
+        for (const block of extractBlocks(resp.content, "poc")) {
+          const p = parseKV(block);
+          if (!p.title || !p.summary || !p.path) continue;
+          pocRows.push({
+            user_id: user.id,
+            mission_id: resolvedMissionId ?? null,
+            session_id: sessionId ?? null,
+            conversation_id: conversationId,
+            source_message_id: msg?.id ?? null,
+            agent_codename: resp.codename,
+            title: p.title.slice(0, 200),
+            summary: p.summary,
+            target: missionTarget ?? null,
+            severity: normSeverity(p.severity),
+            path: p.path,
+            payload: p.payload || null,
+            tools: splitList(p.tools),
+            tags: splitList(p.tags),
+            status: "pending",
+          });
+        }
+      });
+      if (patternRows.length) await (supabase as any).from("patterns").insert(patternRows);
+      if (pocRows.length) await (supabase as any).from("pocs").insert(pocRows);
+    }
+
     // === Persist Cartographer mind-map ===
     const cartoResp = leadResults.find((r) => r.codename === CARTO);
     if (cartoResp && resolvedMissionId && sessionId) {
