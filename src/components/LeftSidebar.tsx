@@ -1,9 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  ChevronLeft, ChevronRight, Radar, Swords, Crosshair, Database,
+  ChevronLeft, ChevronRight, Radar, Swords, Crosshair,
   Settings, BookOpen, DollarSign, ShieldCheck, Users, Globe,
-  FlaskConical, Sparkles,
+  FlaskConical, Sparkles, Beaker,
 } from "lucide-react";
 
 const navItems = [
@@ -13,7 +13,7 @@ const navItems = [
   { icon: Crosshair, label: "Intel Map", path: "/intel-map" },
   { icon: FlaskConical, label: "Practice Lab", path: "/lab" },
   { icon: Sparkles, label: "Patterns", path: "/patterns" },
-  { icon: Database, label: "Data Vault", path: "/data-vault" },
+  { icon: Beaker, label: "Proof-of-Concept", path: "/poc" },
   { icon: BookOpen, label: "Second Brain", path: "/second-brain" },
   { icon: DollarSign, label: "Bounty", path: "/bounty" },
   { icon: Globe, label: "Attack Surface", path: "/attack-surface" },

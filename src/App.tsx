@@ -12,6 +12,7 @@ import Bounty from "./pages/Bounty";
 import OffensiveOps from "./pages/OffensiveOps";
 import IntelMap from "./pages/IntelMap";
 import DataVault from "./pages/DataVault";
+import ProofOfConcept from "./pages/ProofOfConcept";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import AgentProfile from "./pages/AgentProfile";
@@ -49,7 +50,8 @@ const AppRoutes = () => (
         {/* New unified tabs */}
         <Route path="/offensive-ops" element={<OffensiveOps />} />
         <Route path="/intel-map" element={<IntelMap />} />
-        <Route path="/data-vault" element={<DataVault />} />
+        <Route path="/data-vault" element={<Navigate to="/poc" replace />} />
+        <Route path="/poc" element={<ProofOfConcept />} />
 
         {/* Redirects from the merged tabs */}
         <Route path="/exploit-lab" element={<Navigate to="/offensive-ops" replace />} />

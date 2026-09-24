@@ -207,13 +207,40 @@ serve(async (req) => {
     const enabledDynamic = dynamicLeads.filter((l) => invokeSet.has(l.codename));
     const leadsToRun = [...enabledBaseLeads, ...enabledDynamic];
 
+    const PATTERN_POC_INSTRUCTIONS = `
+
+===
+KNOWLEDGE CAPTURE PROTOCOL — MANDATORY:
+When you notice a novel exploitation or recon PATTERN during this turn, append ONE fenced block per pattern at the end of your reply:
+\`\`\`pattern
+title: <short name>
+category: <recon|auth|injection|business-logic|api|stealth|post-exploit|misc>
+description: <2-3 sentence explanation of when it applies>
+example: <optional payload / command / snippet>
+tags: tag1, tag2
+\`\`\`
+When you produce a full reproducible PROOF-OF-CONCEPT (verified path from entry to impact), append ONE fenced block per PoC:
+\`\`\`poc
+title: <short exploit name>
+severity: critical|high|medium|low|info
+summary: <one paragraph describing the impact>
+path:
+1. <step one>
+2. <step two>
+3. <step three>
+payload: <optional exact payload/request>
+tools: tool1, tool2
+tags: tag1, tag2
+\`\`\`
+These blocks are queued for Commander approval — do not treat them as already-approved. Only emit them when you actually have a new pattern or working PoC. Do NOT emit empty blocks.`;
+
     const leadPromises = leadsToRun.map(async (lead) => {
       const leadMessages = [
-        { role: "system", content: lead.personality },
+        { role: "system", content: lead.personality + PATTERN_POC_INSTRUCTIONS },
         ...contextMessages,
         { role: "user", content: userMessage },
         ...(cmdResp ? [{ role: "assistant", content: `[Commander]: ${cmdResp}` }] : []),
-        { role: "user", content: `Operator has summoned you. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 250 words.` },
+        { role: "user", content: `Operator has summoned you. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 250 words. Emit pattern/poc capture blocks per the KNOWLEDGE CAPTURE PROTOCOL when applicable.` },
       ];
       const resp = await callAI(LOVABLE_API_KEY, leadMessages, lead.codename === CARTO ? 1100 : 600);
       return { role: lead.role, codename: lead.codename, sender_name: lead.sender_name, content: resp };
@@ -264,6 +291,55 @@ serve(async (req) => {
         tasks_count: (cur?.tasks_count || 0) + tasks.length,
         findings_count: (cur?.findings_count || 0) + tasks.reduce((s, t) => s + t.findings_count, 0),
       }).eq("id", sessionId);
+    }
+
+    // === Extract PATTERN / POC capture blocks from lead responses ===
+    if (insertedMsgs) {
+      const patternRows: any[] = [];
+      const pocRows: any[] = [];
+      leadResults.forEach((resp) => {
+        const msgIdx = agentResponses.findIndex((a) => a === resp);
+        const msg = insertedMsgs[msgIdx];
+        for (const block of extractBlocks(resp.content, "pattern")) {
+          const p = parseKV(block);
+          if (!p.title || !p.description) continue;
+          patternRows.push({
+            user_id: user.id,
+            mission_id: resolvedMissionId ?? null,
+            session_id: sessionId ?? null,
+            agent_codename: resp.codename,
+            category: (p.category || "misc").toLowerCase(),
+            title: p.title.slice(0, 200),
+            description: p.description,
+            example: p.example || null,
+            tags: splitList(p.tags),
+            status: "pending",
+          });
+        }
+        for (const block of extractBlocks(resp.content, "poc")) {
+          const p = parseKV(block);
+          if (!p.title || !p.summary || !p.path) continue;
+          pocRows.push({
+            user_id: user.id,
+            mission_id: resolvedMissionId ?? null,
+            session_id: sessionId ?? null,
+            conversation_id: conversationId,
+            source_message_id: msg?.id ?? null,
+            agent_codename: resp.codename,
+            title: p.title.slice(0, 200),
+            summary: p.summary,
+            target: missionTarget ?? null,
+            severity: normSeverity(p.severity),
+            path: p.path,
+            payload: p.payload || null,
+            tools: splitList(p.tools),
+            tags: splitList(p.tags),
+            status: "pending",
+          });
+        }
+      });
+      if (patternRows.length) await (supabase as any).from("patterns").insert(patternRows);
+      if (pocRows.length) await (supabase as any).from("pocs").insert(pocRows);
     }
 
     // === Persist Cartographer mind-map ===
@@ -352,6 +428,44 @@ function extractMindmap(content: string): any | null {
   } catch {
     return null;
   }
+}
+
+function extractBlocks(content: string, tag: string): string[] {
+  const re = new RegExp("```" + tag + "\\s*([\\s\\S]*?)```", "gi");
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content))) out.push(m[1].trim());
+  return out;
+}
+
+function parseKV(block: string): Record<string, string> {
+  // Supports single-line "key: value" and multi-line "path:\n1. ..." blocks.
+  const out: Record<string, string> = {};
+  const lines = block.split(/\r?\n/);
+  let currentKey: string | null = null;
+  const knownKeys = new Set(["title", "category", "description", "example", "tags", "severity", "summary", "path", "payload", "tools"]);
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    const km = line.match(/^([a-zA-Z_]+)\s*:\s*(.*)$/);
+    if (km && knownKeys.has(km[1].toLowerCase())) {
+      currentKey = km[1].toLowerCase();
+      out[currentKey] = km[2];
+    } else if (currentKey) {
+      out[currentKey] += (out[currentKey] ? "\n" : "") + line;
+    }
+  }
+  for (const k of Object.keys(out)) out[k] = out[k].trim();
+  return out;
+}
+
+function splitList(s: string | undefined): string[] {
+  if (!s) return [];
+  return s.split(/[,\n]/).map(x => x.trim()).filter(Boolean).slice(0, 20);
+}
+
+function normSeverity(s: string | undefined): string {
+  const v = (s || "").toLowerCase().trim();
+  return ["critical", "high", "medium", "low", "info"].includes(v) ? v : "medium";
 }
 
 async function callAI(apiKey: string, messages: any[], maxTokens = 600): Promise<string> {
