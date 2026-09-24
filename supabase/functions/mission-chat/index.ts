@@ -430,6 +430,44 @@ function extractMindmap(content: string): any | null {
   }
 }
 
+function extractBlocks(content: string, tag: string): string[] {
+  const re = new RegExp("```" + tag + "\\s*([\\s\\S]*?)```", "gi");
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content))) out.push(m[1].trim());
+  return out;
+}
+
+function parseKV(block: string): Record<string, string> {
+  // Supports single-line "key: value" and multi-line "path:\n1. ..." blocks.
+  const out: Record<string, string> = {};
+  const lines = block.split(/\r?\n/);
+  let currentKey: string | null = null;
+  const knownKeys = new Set(["title", "category", "description", "example", "tags", "severity", "summary", "path", "payload", "tools"]);
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    const km = line.match(/^([a-zA-Z_]+)\s*:\s*(.*)$/);
+    if (km && knownKeys.has(km[1].toLowerCase())) {
+      currentKey = km[1].toLowerCase();
+      out[currentKey] = km[2];
+    } else if (currentKey) {
+      out[currentKey] += (out[currentKey] ? "\n" : "") + line;
+    }
+  }
+  for (const k of Object.keys(out)) out[k] = out[k].trim();
+  return out;
+}
+
+function splitList(s: string | undefined): string[] {
+  if (!s) return [];
+  return s.split(/[,\n]/).map(x => x.trim()).filter(Boolean).slice(0, 20);
+}
+
+function normSeverity(s: string | undefined): string {
+  const v = (s || "").toLowerCase().trim();
+  return ["critical", "high", "medium", "low", "info"].includes(v) ? v : "medium";
+}
+
 async function callAI(apiKey: string, messages: any[], maxTokens = 600): Promise<string> {
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
