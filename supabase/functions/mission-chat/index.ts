@@ -207,13 +207,40 @@ serve(async (req) => {
     const enabledDynamic = dynamicLeads.filter((l) => invokeSet.has(l.codename));
     const leadsToRun = [...enabledBaseLeads, ...enabledDynamic];
 
+    const PATTERN_POC_INSTRUCTIONS = `
+
+===
+KNOWLEDGE CAPTURE PROTOCOL — MANDATORY:
+When you notice a novel exploitation or recon PATTERN during this turn, append ONE fenced block per pattern at the end of your reply:
+\`\`\`pattern
+title: <short name>
+category: <recon|auth|injection|business-logic|api|stealth|post-exploit|misc>
+description: <2-3 sentence explanation of when it applies>
+example: <optional payload / command / snippet>
+tags: tag1, tag2
+\`\`\`
+When you produce a full reproducible PROOF-OF-CONCEPT (verified path from entry to impact), append ONE fenced block per PoC:
+\`\`\`poc
+title: <short exploit name>
+severity: critical|high|medium|low|info
+summary: <one paragraph describing the impact>
+path:
+1. <step one>
+2. <step two>
+3. <step three>
+payload: <optional exact payload/request>
+tools: tool1, tool2
+tags: tag1, tag2
+\`\`\`
+These blocks are queued for Commander approval — do not treat them as already-approved. Only emit them when you actually have a new pattern or working PoC. Do NOT emit empty blocks.`;
+
     const leadPromises = leadsToRun.map(async (lead) => {
       const leadMessages = [
-        { role: "system", content: lead.personality },
+        { role: "system", content: lead.personality + PATTERN_POC_INSTRUCTIONS },
         ...contextMessages,
         { role: "user", content: userMessage },
         ...(cmdResp ? [{ role: "assistant", content: `[Commander]: ${cmdResp}` }] : []),
-        { role: "user", content: `Operator has summoned you. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 250 words.` },
+        { role: "user", content: `Operator has summoned you. Execute your part of the mission. Be specific with tools, commands, and expected outputs. Keep response under 250 words. Emit pattern/poc capture blocks per the KNOWLEDGE CAPTURE PROTOCOL when applicable.` },
       ];
       const resp = await callAI(LOVABLE_API_KEY, leadMessages, lead.codename === CARTO ? 1100 : 600);
       return { role: lead.role, codename: lead.codename, sender_name: lead.sender_name, content: resp };
